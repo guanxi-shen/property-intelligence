@@ -53,6 +53,256 @@ header {
   color: white; font-weight: 700; font-size: 14px;
 }
 header .subtitle { color: var(--grey-500); font-weight: 400; font-size: 14px; }
+header .spacer { flex: 1; }
+#upload-btn {
+  background: var(--surface);
+  color: var(--blue-600);
+  border: 1px solid var(--blue-600);
+  border-radius: 8px;
+  padding: 7px 16px;
+  font-size: 13px;
+  font-family: 'Google Sans', sans-serif;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex; align-items: center; gap: 6px;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+#upload-btn:hover { background: var(--blue-50); }
+#upload-btn svg { width: 16px; height: 16px; }
+
+/* Upload overlay */
+#upload-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(32,33,36,0.4);
+  z-index: 100;
+  align-items: center; justify-content: center;
+}
+#upload-overlay.open { display: flex; }
+#upload-modal {
+  background: var(--surface);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(60,64,67,0.25);
+  width: 520px;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 28px;
+}
+#upload-modal h2 {
+  font-family: 'Google Sans', sans-serif;
+  font-size: 18px;
+  font-weight: 500;
+  margin-bottom: 16px;
+  color: var(--grey-900);
+}
+
+/* Drop zone */
+#drop-zone {
+  border: 2px dashed var(--grey-300);
+  border-radius: 12px;
+  padding: 32px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  margin-bottom: 16px;
+}
+#drop-zone:hover, #drop-zone.dragover {
+  border-color: var(--blue-600);
+  background: var(--blue-50);
+}
+#drop-zone .dz-icon { font-size: 32px; color: var(--grey-500); margin-bottom: 8px; }
+#drop-zone .dz-text { font-size: 14px; color: var(--grey-700); }
+#drop-zone .dz-hint { font-size: 12px; color: var(--grey-500); margin-top: 4px; }
+
+/* File list */
+#file-list {
+  max-height: 120px;
+  overflow-y: auto;
+  margin-bottom: 16px;
+}
+.file-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 8px;
+  font-size: 13px;
+  color: var(--grey-800);
+  border-bottom: 1px solid var(--grey-100);
+}
+.file-item .fi-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-item .fi-size { color: var(--grey-500); font-size: 12px; flex-shrink: 0; }
+.file-item .fi-remove {
+  background: none; border: none; color: var(--grey-500); cursor: pointer;
+  font-size: 16px; padding: 0 4px; line-height: 1;
+}
+.file-item .fi-remove:hover { color: var(--grey-800); }
+
+/* Upload action button */
+#upload-start-btn {
+  background: var(--blue-600);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 24px;
+  font-size: 14px;
+  font-family: 'Google Sans', sans-serif;
+  font-weight: 500;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.15s;
+  margin-bottom: 16px;
+}
+#upload-start-btn:hover { background: var(--blue-700); }
+#upload-start-btn:disabled { background: var(--grey-300); color: var(--grey-500); cursor: not-allowed; }
+#upload-error {
+  color: #d93025;
+  font-size: 13px;
+  margin-bottom: 12px;
+  display: none;
+}
+
+/* Pipeline timeline */
+/* Pipeline section - collapsible */
+#pipeline-section { margin-top: 8px; }
+#pipeline-toggle {
+  font-size: 13px;
+  color: var(--grey-700);
+  cursor: pointer;
+  display: flex; align-items: center; gap: 6px;
+  font-weight: 500;
+  padding: 8px 0;
+  user-select: none;
+}
+#pipeline-toggle:hover { color: var(--blue-600); }
+#pipeline-toggle .arrow {
+  display: inline-block;
+  font-size: 10px;
+  transition: transform 0.2s;
+}
+#pipeline-section.open #pipeline-toggle .arrow { transform: rotate(90deg); }
+#pipeline-timeline {
+  display: none;
+  margin-top: 4px;
+}
+#pipeline-section.open #pipeline-timeline { display: block; }
+
+/* Parallel group */
+.timeline-parallel-group {
+  border: 1px solid var(--grey-200);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 4px 0;
+  background: var(--grey-50);
+  position: relative;
+}
+.parallel-label {
+  position: absolute;
+  top: -8px; left: 12px;
+  background: var(--grey-50);
+  padding: 0 6px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--grey-500);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.parallel-tracks {
+  display: flex;
+  gap: 16px;
+}
+.parallel-track {
+  flex: 1;
+}
+.parallel-track .timeline-step:not(:last-child)::after {
+  left: 11px;
+  top: 34px;
+  bottom: -2px;
+}
+.timeline-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+  position: relative;
+}
+.timeline-step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 11px;
+  top: 34px;
+  bottom: -2px;
+  width: 2px;
+  background: var(--grey-200);
+}
+.timeline-step.done:not(:last-child)::after { background: #34a853; }
+.timeline-step.active:not(:last-child)::after {
+  background: linear-gradient(to bottom, #34a853 40%, var(--grey-200) 100%);
+}
+
+.ts-icon {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--grey-200);
+  color: var(--grey-500);
+  transition: all 0.3s;
+  position: relative;
+  z-index: 1;
+}
+.timeline-step.active .ts-icon {
+  background: var(--blue-600);
+  color: white;
+  box-shadow: 0 0 0 4px rgba(26,115,232,0.15);
+}
+.timeline-step.done .ts-icon {
+  background: #34a853;
+  color: white;
+}
+.timeline-step.error .ts-icon {
+  background: #d93025;
+  color: white;
+}
+
+.ts-body { flex: 1; min-width: 0; }
+.ts-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--grey-500);
+  line-height: 24px;
+}
+.timeline-step.active .ts-label,
+.timeline-step.done .ts-label { color: var(--grey-900); }
+.ts-detail {
+  font-size: 12px;
+  color: var(--grey-500);
+  margin-top: 2px;
+}
+
+/* Active step spinner in icon */
+.timeline-step.active .ts-icon::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border: 2px solid transparent;
+  border-top-color: var(--blue-600);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* Close modal */
+#upload-close {
+  position: absolute;
+  top: 16px; right: 16px;
+  background: none; border: none;
+  font-size: 20px; cursor: pointer;
+  color: var(--grey-500);
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+}
+#upload-close:hover { background: var(--grey-100); color: var(--grey-800); }
+#upload-modal { position: relative; }
 
 /* Layout */
 #main { flex: 1; display: flex; overflow: hidden; }
@@ -279,7 +529,81 @@ header .subtitle { color: var(--grey-500); font-weight: 400; font-size: 14px; }
   <div class="header-icon">P</div>
   Property Intelligence
   <span class="subtitle">Valuation Assistant</span>
+  <span class="spacer"></span>
+  <button id="upload-btn" onclick="openUploadModal()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    Upload PDFs
+  </button>
 </header>
+
+<!-- Upload Modal -->
+<div id="upload-overlay" onclick="if(event.target===this)closeUploadModal()">
+  <div id="upload-modal">
+    <button id="upload-close" onclick="closeUploadModal()">&times;</button>
+    <h2>Upload Documents</h2>
+
+    <div id="drop-zone" onclick="document.getElementById('file-input').click()">
+      <div class="dz-icon">&#128196;</div>
+      <div class="dz-text">Drop PDF files here or click to browse</div>
+      <div class="dz-hint">Up to 10 files, 50MB each</div>
+    </div>
+    <input type="file" id="file-input" accept=".pdf" multiple style="display:none">
+
+    <div id="file-list"></div>
+    <div id="upload-error"></div>
+
+    <button id="upload-start-btn" disabled onclick="startUpload()">Upload & Process</button>
+
+    <div id="pipeline-section">
+      <div id="pipeline-toggle" onclick="document.getElementById('pipeline-section').classList.toggle('open')">
+        <span class="arrow">&#9654;</span> Ingestion Pipeline Steps
+      </div>
+      <div id="pipeline-timeline">
+      <div class="timeline-step" data-step="upload">
+        <div class="ts-icon">1</div>
+        <div class="ts-body"><div class="ts-label">Upload to Cloud Storage</div><div class="ts-detail"></div></div>
+      </div>
+      <div class="timeline-step" data-step="parse">
+        <div class="ts-icon">2</div>
+        <div class="ts-body"><div class="ts-label">Parse with Document AI Layout Parser</div><div class="ts-detail"></div></div>
+      </div>
+      <div class="timeline-step" data-step="render">
+        <div class="ts-icon">3</div>
+        <div class="ts-body"><div class="ts-label">Render pages to PNG</div><div class="ts-detail"></div></div>
+      </div>
+      <div class="timeline-parallel-group">
+        <div class="parallel-label">Parallel</div>
+        <div class="parallel-tracks">
+          <div class="parallel-track">
+            <div class="timeline-step" data-step="embed_text">
+              <div class="ts-icon">4a</div>
+              <div class="ts-body"><div class="ts-label">Generate text embeddings</div><div class="ts-detail"></div></div>
+            </div>
+            <div class="timeline-step" data-step="sparse">
+              <div class="ts-icon">4b</div>
+              <div class="ts-body"><div class="ts-label">Build TF-IDF sparse vectors</div><div class="ts-detail"></div></div>
+            </div>
+          </div>
+          <div class="parallel-track">
+            <div class="timeline-step" data-step="embed_images">
+              <div class="ts-icon">4c</div>
+              <div class="ts-body"><div class="ts-label">Generate image embeddings</div><div class="ts-detail"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="timeline-step" data-step="index">
+        <div class="ts-icon">5</div>
+        <div class="ts-body"><div class="ts-label">Update Vector Search indexes</div><div class="ts-detail"></div></div>
+      </div>
+      <div class="timeline-step" data-step="finalize">
+        <div class="ts-icon">6</div>
+        <div class="ts-body"><div class="ts-label">Finalize</div><div class="ts-detail"></div></div>
+      </div>
+    </div>
+    </div>
+  </div>
+</div>
 
 <div id="main">
   <div id="chat-col">
@@ -518,6 +842,208 @@ async function sendMessage() {
 
   sendBtn.disabled = false;
   input.focus();
+}
+
+// -- Upload UI --
+
+let uploadFiles = [];
+const fileInput = document.getElementById('file-input');
+const dropZone = document.getElementById('drop-zone');
+const fileList = document.getElementById('file-list');
+const uploadError = document.getElementById('upload-error');
+const uploadStartBtn = document.getElementById('upload-start-btn');
+const uploadOverlay = document.getElementById('upload-overlay');
+const pipelineTimeline = document.getElementById('pipeline-timeline');
+const pipelineSection = document.getElementById('pipeline-section');
+
+function openUploadModal() {
+  uploadOverlay.classList.add('open');
+}
+
+function closeUploadModal() {
+  // Allow closing only if not actively uploading
+  if (uploadStartBtn.disabled && pipelineTimeline.classList.contains('visible')) {
+    const activeSteps = pipelineTimeline.querySelectorAll('.timeline-step.active');
+    if (activeSteps.length > 0) return; // still processing
+  }
+  uploadOverlay.classList.remove('open');
+}
+
+function resetUploadUI() {
+  uploadFiles = [];
+  fileList.innerHTML = '';
+  uploadError.style.display = 'none';
+  uploadStartBtn.disabled = true;
+  pipelineSection.classList.remove('open');
+  pipelineTimeline.querySelectorAll('.timeline-step').forEach(s => {
+    s.className = 'timeline-step';
+    s.querySelector('.ts-detail').textContent = '';
+  });
+}
+
+// Drag-and-drop
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  addFiles(Array.from(e.dataTransfer.files));
+});
+
+fileInput.addEventListener('change', () => {
+  addFiles(Array.from(fileInput.files));
+  fileInput.value = '';
+});
+
+function addFiles(newFiles) {
+  uploadError.style.display = 'none';
+  for (const f of newFiles) {
+    if (!f.name.toLowerCase().endsWith('.pdf')) {
+      showUploadError(f.name + ': only PDF files allowed');
+      continue;
+    }
+    if (f.size > 50 * 1024 * 1024) {
+      showUploadError(f.name + ': exceeds 50MB limit');
+      continue;
+    }
+    if (uploadFiles.length >= 10) {
+      showUploadError('Maximum 10 files per upload');
+      break;
+    }
+    if (!uploadFiles.some(x => x.name === f.name)) {
+      uploadFiles.push(f);
+    }
+  }
+  renderFileList();
+}
+
+function removeFile(idx) {
+  uploadFiles.splice(idx, 1);
+  renderFileList();
+}
+
+function renderFileList() {
+  fileList.innerHTML = '';
+  uploadFiles.forEach((f, i) => {
+    const sizeMB = (f.size / 1024 / 1024).toFixed(1);
+    const div = document.createElement('div');
+    div.className = 'file-item';
+    div.innerHTML = '<span class="fi-name">' + escapeHtml(f.name) + '</span>'
+      + '<span class="fi-size">' + sizeMB + ' MB</span>'
+      + '<button class="fi-remove" onclick="removeFile(' + i + ')">&times;</button>';
+    fileList.appendChild(div);
+  });
+  uploadStartBtn.disabled = uploadFiles.length === 0;
+}
+
+function showUploadError(msg) {
+  uploadError.textContent = msg;
+  uploadError.style.display = 'block';
+}
+
+function setStepState(stepName, state, detail) {
+  const el = pipelineTimeline.querySelector('[data-step="' + stepName + '"]');
+  if (!el) return;
+  el.className = 'timeline-step ' + state;
+  if (detail !== undefined) {
+    el.querySelector('.ts-detail').textContent = detail;
+  }
+  // Update icon: checkmark for done, X for error
+  const icon = el.querySelector('.ts-icon');
+  if (state === 'done') icon.innerHTML = '&#10003;';
+  else if (state === 'error') icon.innerHTML = '&#10007;';
+}
+
+async function startUpload() {
+  if (uploadFiles.length === 0) return;
+
+  uploadError.style.display = 'none';
+  uploadStartBtn.disabled = true;
+  dropZone.style.display = 'none';
+  fileList.style.display = 'none';
+
+  // Show timeline
+  pipelineSection.classList.add('open');
+  const stepLabels = {upload:'1', parse:'2', render:'3', embed_text:'4a', sparse:'4b', embed_images:'4c', index:'5', finalize:'6'};
+  pipelineTimeline.querySelectorAll('.timeline-step').forEach(s => {
+    s.className = 'timeline-step';
+    s.querySelector('.ts-detail').textContent = '';
+    s.querySelector('.ts-icon').textContent = stepLabels[s.dataset.step] || '';
+  });
+
+  // Build FormData
+  const formData = new FormData();
+  uploadFiles.forEach(f => formData.append('files', f));
+
+  try {
+    const res = await fetch('/upload', { method: 'POST', body: formData });
+
+    if (!res.ok) {
+      const err = await res.json();
+      showUploadError(err.error || 'Upload failed');
+      uploadStartBtn.disabled = false;
+      dropZone.style.display = '';
+      fileList.style.display = '';
+      return;
+    }
+
+    // Parse SSE stream
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, {stream: true});
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      let eventType = '';
+
+      for (const line of lines) {
+        if (line.startsWith('event: ')) {
+          eventType = line.slice(7);
+        } else if (line.startsWith('data: ') && eventType) {
+          const data = JSON.parse(line.slice(6));
+
+          if (eventType === 'progress') {
+            const step = data.step;
+            const status = data.status;
+            const detail = data.detail || '';
+
+            if (status === 'active') {
+              setStepState(step, 'active', detail);
+            } else if (status === 'done') {
+              setStepState(step, 'done', detail);
+            } else if (status === 'error') {
+              setStepState(step, 'error', detail);
+            }
+          } else if (eventType === 'complete') {
+            // Pipeline finished -- all steps should be done
+          }
+          eventType = '';
+        }
+      }
+    }
+
+    // Reset for next upload
+    uploadFiles = [];
+    uploadStartBtn.textContent = 'Done -- Upload More';
+    uploadStartBtn.disabled = false;
+    uploadStartBtn.onclick = () => {
+      resetUploadUI();
+      dropZone.style.display = '';
+      fileList.style.display = '';
+      uploadStartBtn.textContent = 'Upload & Process';
+      uploadStartBtn.onclick = startUpload;
+    };
+
+  } catch (err) {
+    showUploadError('Connection error: ' + err.message);
+    uploadStartBtn.disabled = false;
+    dropZone.style.display = '';
+    fileList.style.display = '';
+  }
 }
 </script>
 </body>

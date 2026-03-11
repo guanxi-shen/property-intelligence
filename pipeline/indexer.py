@@ -39,6 +39,21 @@ def _load_existing_metadata(blob_path: str) -> Dict:
     return {}
 
 
+def _load_existing_jsonl(blob_path: str) -> Dict[str, dict]:
+    """Load existing JSONL embeddings from GCS, keyed by datapoint id."""
+    client = _get_storage_client()
+    bucket = client.bucket(BUCKET_NAME)
+    blob = bucket.blob(blob_path)
+    if not blob.exists():
+        return {}
+    existing = {}
+    for line in blob.download_as_text().strip().split("\n"):
+        if line.strip():
+            dp = json.loads(line)
+            existing[dp["id"]] = dp
+    return existing
+
+
 def _make_text_datapoint_id(chunk: Dict) -> str:
     """Generate a deterministic ID for a text chunk."""
     stem = Path(chunk["source_pdf"]).stem
@@ -68,18 +83,28 @@ def _infer_doc_type(filename: str) -> str:
     return "property_document"
 
 
+def _remove_by_source_pdfs(existing: Dict, metadata: Dict, source_pdfs: set, id_fn_prefix: str = ""):
+    """Remove all entries from existing JSONL and metadata that belong to the given source PDFs."""
+    to_remove = [dp_id for dp_id, meta in metadata.items() if meta.get("source_pdf") in source_pdfs]
+    for dp_id in to_remove:
+        existing.pop(dp_id, None)
+        metadata.pop(dp_id, None)
+
+
 def update_text_index(chunks: List[Dict]):
     """Write text embeddings as JSONL to GCS and update the text index.
 
-    Each chunk dict must have: text, source_pdf, page_number, chunk_index,
-    chunk_type, embedding, sparse_embedding.
+    Merges with existing data. Re-uploaded documents overwrite their old entries.
 
     Args:
         chunks: List of chunk dicts with embeddings attached.
     """
-    # Build JSONL and metadata
-    jsonl_lines = []
+    existing = _load_existing_jsonl(TEXT_EMBEDDINGS_PATH)
     metadata = _load_existing_metadata(TEXT_METADATA_PATH)
+
+    # Determine which source PDFs are being replaced
+    new_source_pdfs = {c["source_pdf"] for c in chunks if c.get("embedding") is not None}
+    _remove_by_source_pdfs(existing, metadata, new_source_pdfs)
 
     for chunk in chunks:
         if chunk.get("embedding") is None:
@@ -95,11 +120,10 @@ def update_text_index(chunks: List[Dict]):
             "restricts": [{"namespace": "doc_type", "allow": [doc_type]}],
         }
 
-        # Attach sparse embedding for hybrid search
         if chunk.get("sparse_embedding"):
             datapoint["sparse_embedding"] = chunk["sparse_embedding"]
 
-        jsonl_lines.append(json.dumps(datapoint))
+        existing[dp_id] = datapoint
 
         metadata[dp_id] = {
             "datapoint_id": dp_id,
@@ -107,34 +131,36 @@ def update_text_index(chunks: List[Dict]):
             "page_number": chunk["page_number"],
             "chunk_index": chunk["chunk_index"],
             "chunk_type": chunk.get("chunk_type", "text"),
-            "content": chunk["text"][:2000],  # Truncate for metadata lookup
+            "content": chunk["text"][:2000],
             "structural_context": chunk.get("structural_context", ""),
             "gcs_uri": f"gs://{BUCKET_NAME}/processed/{chunk['source_pdf']}",
         }
 
-    # Upload JSONL
-    jsonl_content = "\n".join(jsonl_lines)
+    # Write merged JSONL
+    jsonl_content = "\n".join(json.dumps(dp) for dp in existing.values())
     _upload_json(TEXT_EMBEDDINGS_PATH, jsonl_content)
-    print(f"Wrote {len(jsonl_lines)} text datapoints to gs://{BUCKET_NAME}/{TEXT_EMBEDDINGS_PATH}")
+    print(f"Wrote {len(existing)} text datapoints to gs://{BUCKET_NAME}/{TEXT_EMBEDDINGS_PATH}")
 
-    # Upload metadata
+    # Write merged metadata
     _upload_json(TEXT_METADATA_PATH, json.dumps(metadata))
     print(f"Updated text metadata: {len(metadata)} total entries")
 
-    # Trigger index update
     _update_index(TEXT_EMBEDDINGS_PATH)
 
 
 def update_multimodal_index(page_images: List[Dict]):
     """Write page image embeddings as JSONL to GCS and update the multimodal index.
 
-    Each page dict must have: source_pdf, page_number, gcs_uri, embedding.
+    Merges with existing data. Re-uploaded documents overwrite their old entries.
 
     Args:
         page_images: List of page dicts with embeddings attached.
     """
-    jsonl_lines = []
+    existing = _load_existing_jsonl(MULTIMODAL_EMBEDDINGS_PATH)
     metadata = _load_existing_metadata(MULTIMODAL_METADATA_PATH)
+
+    new_source_pdfs = {p["source_pdf"] for p in page_images if p.get("embedding") is not None}
+    _remove_by_source_pdfs(existing, metadata, new_source_pdfs)
 
     for page in page_images:
         if page.get("embedding") is None:
@@ -149,7 +175,7 @@ def update_multimodal_index(page_images: List[Dict]):
             "crowding_tag": page["source_pdf"],
             "restricts": [{"namespace": "doc_type", "allow": [doc_type]}],
         }
-        jsonl_lines.append(json.dumps(datapoint))
+        existing[dp_id] = datapoint
 
         metadata[dp_id] = {
             "datapoint_id": dp_id,
@@ -160,16 +186,15 @@ def update_multimodal_index(page_images: List[Dict]):
             "height": page.get("height"),
         }
 
-    # Upload JSONL
-    jsonl_content = "\n".join(jsonl_lines)
+    # Write merged JSONL
+    jsonl_content = "\n".join(json.dumps(dp) for dp in existing.values())
     _upload_json(MULTIMODAL_EMBEDDINGS_PATH, jsonl_content)
-    print(f"Wrote {len(jsonl_lines)} multimodal datapoints to gs://{BUCKET_NAME}/{MULTIMODAL_EMBEDDINGS_PATH}")
+    print(f"Wrote {len(existing)} multimodal datapoints to gs://{BUCKET_NAME}/{MULTIMODAL_EMBEDDINGS_PATH}")
 
-    # Upload metadata
+    # Write merged metadata
     _upload_json(MULTIMODAL_METADATA_PATH, json.dumps(metadata))
     print(f"Updated multimodal metadata: {len(metadata)} total entries")
 
-    # Trigger index update
     _update_index(MULTIMODAL_EMBEDDINGS_PATH)
 
 

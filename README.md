@@ -15,52 +15,144 @@
 
 ---
 
-Upload property documents (appraisals, inspections, comparable sales) and ask questions in natural language. The system parses PDFs with Document AI Layout Parser, embeds text and page images into Vertex AI Vector Search, and answers queries with Gemini using a multimodal agentic RAG pipeline with inline citations and live streaming.
+## Problem
+
+A large real estate customer needs a property valuation chatbot, but their proprietary data is trapped in siloed, unstructured PDF formats that standard RAG tools can't parse. Property documents -- appraisals, inspection reports, comparable sales grids, plat maps, settlement statements -- contain a mix of dense text, structured tables, photographs, hand-drawn sketches, and scanned forms. Standard text-extraction pipelines lose table structure, miss visual content entirely, and can't distinguish a comparable sales adjustment grid from a paragraph of boilerplate.
+
+## How This Solves It
+
+**1. Structure-aware parsing instead of blind text extraction**
+
+Document AI Layout Parser (powered by Gemini 3.0 Flash) understands document structure -- headings, tables, lists, paragraphs -- and produces semantic chunks that preserve context. A row in an adjustment grid stays with its column headers. A property address stays associated with its valuation figures. This is fundamentally different from naive page-level or sliding-window chunking that breaks mid-table.
+
+**2. Dual-modality retrieval -- text and visual**
+
+Many answers in property documents live in visual elements: adjustment grids, floor plans, neighborhood maps, property photos, site sketches. Text extraction alone cannot capture these. The system embeds both extracted text chunks and rendered page images into the same 768-dimensional semantic space using Gemini Embedding 2, then indexes them in two separate Vertex AI Vector Search indexes. The agent decides at query time whether to search text, images, or both.
+
+**3. Hybrid search for exact and semantic matching**
+
+Property queries often involve exact values -- "$425,000", "123 Main St", "MLS #2024-1234". Pure dense vector search struggles with exact keyword matches. The text index combines dense embeddings with TF-IDF sparse vectors, fused via Reciprocal Rank Fusion (RRF). This means semantic queries ("properties with deferred maintenance") and exact keyword queries ("$425,000 adjusted sale price") both work reliably.
+
+**4. Agentic reasoning with self-retry and discovery**
+
+Rather than dumping all retrieved context into a single prompt, a Gemini 3.1 Pro agent with function calling autonomously plans its search strategy. It formulates diverse queries (mixing semantic and keyword phrasings), evaluates the results, and if they're insufficient, refines its queries and searches again -- up to 3 rounds per tool. Cross-round deduplication ensures repeated searches surface new information rather than redundant results. The agent can call `search_text` for factual lookups, `search_pages` for visual analysis, or both in sequence, deciding on the fly based on what it finds. Every claim in the response is inline-cited to a specific PDF page.
+
+**5. Multimodal document analysis**
+
+When the agent retrieves page images via `search_pages`, Gemini doesn't just return metadata -- it visually analyzes the actual page renders. Adjustment grids, floor plans, property photos, and scanned forms are passed as image content directly into the model's context via `FunctionResponseFileData`. This means the agent can read values from a comparable sales grid, describe what it sees in a property photo, or trace lines on a plat map -- answering questions that pure text retrieval would miss entirely.
+
+**6. Self-service document ingestion**
+
+The system includes a browser-based upload flow where users drop PDFs and watch the full ingestion pipeline execute in real time -- parse, render, embed (text and images in parallel), index. New documents are immediately searchable. Re-uploading the same document overwrites its previous entries. This turns a batch ETL process into something a non-technical user can operate.
 
 ## Architecture
 
-```mermaid
-graph TB
-    subgraph "Client"
-        A["Browser<br/><small>Material Design UI</small>"]
-    end
+```
+ User Browser (Material Design UI)
+       |
+       | SSE streaming (chat + upload progress)
+       v
+ +----------------------------------------------------------+
+ |  Cloud Run -- FastAPI                                     |
+ |                                                           |
+ |  /chat/stream ---- Gemini 3.1 Pro Agent                   |
+ |                     |            |                         |
+ |                     | FC tool    | FC tool                 |
+ |                     v            v                         |
+ |              search_text   search_pages                    |
+ |                  |               |                         |
+ |  /upload ---+    |  gRPC         |  gRPC                   |
+ |             |    v               v                         |
+ |             |  +-------------------------------+           |
+ |             |  | Vertex AI Vector Search       |           |
+ |             |  |                               |           |
+ |             |  |  Text Index     Multimodal    |           |
+ |             |  |  (dense +       Index         |           |
+ |             |  |   TF-IDF        (dense)       |           |
+ |             |  |   sparse)                     |           |
+ |             |  +-------------------------------+           |
+ |             |           ^               ^                  |
+ |             |           |               |                  |
+ |             v           |               |                  |
+ |  +--- Ingestion Pipeline (parallel) --------+             |
+ |  |                                           |             |
+ |  |  Document AI -----> Text Chunks           |             |
+ |  |  Layout Parser      |         |           |             |
+ |  |                     v         v           |             |
+ |  |              Gemini Emb 2   TF-IDF        |             |
+ |  |              (768-dim)      (sparse)      |             |
+ |  |                                           |             |
+ |  |  PyMuPDF ---------> Page PNGs             |             |
+ |  |  (page render)      |                     |             |
+ |  |                     v                     |             |
+ |  |              Gemini Emb 2                 |             |
+ |  |              (768-dim)                    |             |
+ |  +-------------------------------------------+            |
+ +----------------------------------------------------------+
+       |
+       v
+   Cloud Storage (PDFs, page images, embeddings, metadata)
+```
 
-    subgraph "Google Cloud"
-        B["Cloud Storage<br/><small>PDF uploads, page images, metadata</small>"]
-        C["Eventarc"]
-        D["Cloud Run<br/><small>FastAPI</small>"]
-        E["Document AI<br/><small>Layout Parser</small>"]
-        F["Gemini 3.1 Pro<br/><small>Agentic reasoning</small>"]
-        G["Gemini Embedding 2<br/><small>Text + image embeddings</small>"]
+### Query Flow
 
-        subgraph "Vertex AI Vector Search"
-            H["Text Index<br/><small>Hybrid: dense + TF-IDF sparse</small>"]
-            I["Multimodal Index<br/><small>Page image embeddings</small>"]
-        end
-    end
-
-    A -- "SSE streaming" --> D
-    B -- "object.finalized" --> C
-    C -- "POST /pipeline/trigger" --> D
-    D --> E
-    D --> F
-    D --> G
-    D -- "gRPC" --> H
-    D -- "gRPC" --> I
-    G --> H
-    G --> I
+```
+  User Question
+       |
+       v
+  Gemini 3.1 Pro (thinking + function calling)
+       |
+       +--- Round 1: search_text(["property value 123 Main St", "$425,000"])
+       |       |
+       |       v
+       |    Text Index --- dense + sparse (RRF) ---> ranked chunks with metadata
+       |       |
+       |       v
+       |    Agent evaluates: sufficient? -----> NO
+       |
+       +--- Round 2: search_pages(["adjustment grid", "comparable sales table"])
+       |       |
+       |       v
+       |    Multimodal Index --- image similarity ---> page PNGs
+       |       |
+       |       v
+       |    Agent visually analyzes page images (reads tables, photos, maps)
+       |       |
+       |       v
+       |    Agent evaluates: sufficient? -----> YES
+       |
+       v
+  Cited Answer (SSE streamed with inline [source.pdf, p.N] citations)
 ```
 
 ### Ingestion Pipeline
 
-Each uploaded PDF goes through four stages:
+Each uploaded PDF goes through six stages, with embedding steps running in parallel:
+
+```
+1. Upload to GCS           sequential
+2. Parse (Document AI)     sequential
+3. Render pages (PyMuPDF)  sequential
+             |
+     +-------+-------+
+     |               |
+4a. Text embed    4c. Image embed      parallel
+4b. TF-IDF sparse                      parallel
+     |               |
+     +-------+-------+
+             |
+5. Update Vector Search indexes
+6. Finalize (move to processed/)
+```
 
 | Stage | Service | What it does |
 |-------|---------|-------------|
 | **Parse** | Document AI Layout Parser | Extracts semantic text chunks with structural context (headings, tables) |
 | **Render** | PyMuPDF | Renders each page to 200 DPI PNG, uploads to GCS |
-| **Embed** | Gemini Embedding 2 | Generates 768-dim vectors for text chunks (`RETRIEVAL_DOCUMENT`) and page images |
-| **Index** | Vertex AI Vector Search | Upserts vectors with metadata; text index includes TF-IDF sparse vectors for hybrid search |
+| **Text Embed** | Gemini Embedding 2 | 768-dim dense vectors for text chunks (`RETRIEVAL_DOCUMENT` task type) |
+| **Sparse Embed** | scikit-learn TF-IDF | Sparse vectors for exact keyword matching (addresses, dollar amounts) |
+| **Image Embed** | Gemini Embedding 2 | 768-dim dense vectors for page images (shared semantic space with text) |
+| **Index** | Vertex AI Vector Search | Upserts vectors with crowding tags and doc_type restricts; merges with existing data, same-filename documents are overwritten |
 
 ### Search
 
@@ -68,15 +160,16 @@ The Gemini agent has two search tools and decides which to call (can use both, m
 
 | Tool | Index | Method | Best for |
 |------|-------|--------|----------|
-| `search_text` | Text (hybrid) | Dense + TF-IDF sparse via RRF fusion | Facts, numbers, addresses, dollar amounts |
-| `search_pages` | Multimodal (dense) | Image embedding similarity | Tables, photos, maps, floor plans, sketches |
+| `search_text` | Text (hybrid) | Dense + TF-IDF sparse via RRF fusion (alpha=0.85) | Facts, numbers, addresses, dollar amounts |
+| `search_pages` | Multimodal (dense) | Image embedding similarity with diversity reranking | Tables, photos, maps, floor plans, sketches |
 
 ### Frontend
 
-- Server-Sent Events for live streaming of thinking, tool calls, and answer text
-- Clickable inline citations that open a PDF viewer at the cited page
-- Collapsible panel showing all retrieved documents grouped by source
-- Google Material Design styling
+- **Chat**: SSE streaming of thinking, tool calls, and answer text
+- **Citations**: Clickable inline citations open a PDF viewer at the cited page
+- **Upload**: Drag-and-drop file picker with real-time pipeline progress timeline showing parallel execution
+- **Retrieved docs**: Collapsible panel showing all retrieved documents grouped by source
+- Google Material Design styling with Google Sans typography
 
 ## Project Structure
 

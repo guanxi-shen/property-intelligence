@@ -1,16 +1,21 @@
-"""FastAPI server with SSE streaming chat and pipeline trigger endpoints"""
+"""FastAPI server with SSE streaming chat, file upload with pipeline, and trigger endpoints"""
 
 import asyncio
 import json
 import logging
-from datetime import timedelta
+import tempfile
+import os
+from collections import defaultdict
+from datetime import date, timedelta
 from pathlib import Path
+from typing import List
 
-from fastapi import FastAPI, Request
+import fitz  # PyMuPDF for page count validation
+from fastapi import FastAPI, Request, UploadFile, File
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from google.cloud import storage
 
-from src.config import CREDENTIALS, PROJECT_ID, BUCKET_NAME, PROCESSED_PREFIX
+from src.config import CREDENTIALS, PROJECT_ID, BUCKET_NAME, PROCESSED_PREFIX, UPLOADS_PREFIX
 
 logger = logging.getLogger(__name__)
 app = FastAPI(title="Property Intelligence")
@@ -18,12 +23,43 @@ app = FastAPI(title="Property Intelligence")
 _agents = {}
 _storage_client = None
 
+# Upload constraints
+UPLOAD_MAX_FILES = 10
+UPLOAD_MAX_SIZE_MB = 50
+UPLOAD_DAILY_LIMIT = 30
+_upload_counts: dict[str, int] = defaultdict(int)
+
 
 def _get_storage():
     global _storage_client
     if _storage_client is None:
         _storage_client = storage.Client(credentials=CREDENTIALS, project=PROJECT_ID)
     return _storage_client
+
+
+def _check_daily_limit(count: int) -> str | None:
+    """Return error message if daily limit would be exceeded, else None."""
+    today = date.today().isoformat()
+    if _upload_counts[today] + count > UPLOAD_DAILY_LIMIT:
+        remaining = UPLOAD_DAILY_LIMIT - _upload_counts[today]
+        return f"Daily upload limit ({UPLOAD_DAILY_LIMIT}). {remaining} remaining today."
+    return None
+
+
+def _validate_pdf(pdf_bytes: bytes, filename: str) -> str | None:
+    """Return error message if PDF is invalid, else None."""
+    size_mb = len(pdf_bytes) / (1024 * 1024)
+    if size_mb > UPLOAD_MAX_SIZE_MB:
+        return f"{filename}: {size_mb:.1f}MB exceeds {UPLOAD_MAX_SIZE_MB}MB limit"
+    try:
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        pages = doc.page_count
+        doc.close()
+    except Exception:
+        return f"{filename}: not a valid PDF"
+    if pages == 0:
+        return f"{filename}: PDF has no pages"
+    return None
 
 
 def _get_agent(session_id: str):
@@ -135,6 +171,177 @@ async def chat(request: Request):
     result["citations"] = _enrich_citations(result.get("citations", []))
     result["retrieved_docs"] = _enrich_citations(result.get("retrieved_docs", []))
     return result
+
+
+# -- Upload + Process (single action with SSE progress) --
+
+@app.post("/upload")
+async def upload_and_process(files: List[UploadFile] = File(...)):
+    """Validate, upload to GCS, and run full pipeline. Returns SSE progress stream."""
+    if len(files) > UPLOAD_MAX_FILES:
+        return JSONResponse(
+            {"error": f"Max {UPLOAD_MAX_FILES} files per upload, got {len(files)}"},
+            status_code=400,
+        )
+
+    limit_err = _check_daily_limit(len(files))
+    if limit_err:
+        return JSONResponse({"error": limit_err}, status_code=429)
+
+    # Read all file bytes upfront and validate
+    file_data = []  # [(filename, bytes)]
+    for f in files:
+        if not f.filename.lower().endswith(".pdf"):
+            return JSONResponse({"error": f"{f.filename}: only PDF files allowed"}, status_code=400)
+        raw = await f.read()
+        err = _validate_pdf(raw, f.filename)
+        if err:
+            return JSONResponse({"error": err}, status_code=400)
+        file_data.append((f.filename, raw))
+
+    queue = asyncio.Queue()
+    loop = asyncio.get_event_loop()
+
+    def emit(step: str, status: str, detail: str = ""):
+        loop.call_soon_threadsafe(queue.put_nowait, {
+            "step": step, "status": status, "detail": detail,
+        })
+
+    def run_pipeline():
+        from pipeline.document_ai import parse_pdf
+        from pipeline.page_converter import convert_pdf_to_pages
+        from pipeline.embedder import embed_text_chunks, embed_page_images, build_sparse_embeddings
+        from pipeline.indexer import update_text_index, update_multimodal_index
+
+        n = len(file_data)
+        client = _get_storage()
+        bucket = client.bucket(BUCKET_NAME)
+        all_chunks = []
+        all_pages = []
+
+        # Step 1: Upload to GCS
+        emit("upload", "active", f"Uploading {n} PDF(s) to Cloud Storage")
+        for i, (name, raw) in enumerate(file_data):
+            blob = bucket.blob(f"{UPLOADS_PREFIX}{name}")
+            blob.upload_from_string(raw, content_type="application/pdf")
+            emit("upload", "active", f"Uploaded {i+1}/{n}: {name}")
+        emit("upload", "done", f"{n} file(s) uploaded")
+
+        # Step 2: Parse with Document AI Layout Parser
+        emit("parse", "active", f"Parsing {n} document(s) with Layout Parser")
+        for i, (name, _) in enumerate(file_data):
+            gcs_uri = f"gs://{BUCKET_NAME}/{UPLOADS_PREFIX}{name}"
+            try:
+                chunks = parse_pdf(gcs_uri)
+                for c in chunks:
+                    c["source_pdf"] = name
+                all_chunks.extend(chunks)
+                emit("parse", "active", f"Parsed {i+1}/{n}: {name} ({len(chunks)} chunks)")
+            except Exception as e:
+                emit("parse", "active", f"Parse error on {name}: {e}")
+        emit("parse", "done", f"{len(all_chunks)} chunks extracted")
+
+        # Step 3: Render pages to PNG
+        emit("render", "active", f"Rendering pages to PNG")
+        for i, (name, _) in enumerate(file_data):
+            gcs_uri = f"gs://{BUCKET_NAME}/{UPLOADS_PREFIX}{name}"
+            try:
+                pages = convert_pdf_to_pages(gcs_uri)
+                all_pages.extend(pages)
+                emit("render", "active", f"Rendered {i+1}/{n}: {name} ({len(pages)} pages)")
+            except Exception as e:
+                emit("render", "active", f"Render error on {name}: {e}")
+        emit("render", "done", f"{len(all_pages)} page images created")
+
+        # Steps 4-6: Embed text, build sparse, embed images (parallel)
+        from concurrent.futures import ThreadPoolExecutor, as_completed as cf_done
+
+        def _do_text_and_sparse():
+            emit("embed_text", "active", f"Embedding {len(all_chunks)} text chunks")
+            result = embed_text_chunks(all_chunks)
+            emit("embed_text", "done", f"{len(result)} text embeddings generated")
+            emit("sparse", "active", "Building TF-IDF sparse vectors for hybrid search")
+            result = build_sparse_embeddings(result)
+            emit("sparse", "done", "Sparse vectors built")
+            return result
+
+        def _do_images():
+            emit("embed_images", "active", f"Embedding {len(all_pages)} page images")
+            result = embed_page_images(all_pages)
+            embedded = sum(1 for p in result if p.get("embedding"))
+            emit("embed_images", "done", f"{embedded} image embeddings generated")
+            return result
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            text_future = pool.submit(_do_text_and_sparse)
+            image_future = pool.submit(_do_images)
+            all_chunks = text_future.result()
+            all_pages = image_future.result()
+
+        # Step 7: Update Vector Search indexes
+        emit("index", "active", "Updating Vector Search indexes")
+        update_text_index(all_chunks)
+        emit("index", "active", "Text index updated, updating multimodal index...")
+        update_multimodal_index(all_pages)
+        emit("index", "done", "Both indexes updated")
+
+        # Step 8: Move to processed
+        emit("finalize", "active", "Moving files to processed/")
+        for name, _ in file_data:
+            try:
+                src = bucket.blob(f"{UPLOADS_PREFIX}{name}")
+                bucket.copy_blob(src, bucket, f"{PROCESSED_PREFIX}{name}")
+                src.delete()
+            except Exception:
+                pass
+
+        _upload_counts[date.today().isoformat()] += n
+        emit("finalize", "done", f"{n} document(s) ready to query")
+
+    async def event_generator():
+        task = asyncio.get_event_loop().run_in_executor(None, run_pipeline)
+
+        # Emit events until pipeline finishes
+        done = False
+        while not done:
+            try:
+                event = await asyncio.wait_for(queue.get(), timeout=0.5)
+                yield _sse_event("progress", event)
+                if event["step"] == "finalize" and event["status"] == "done":
+                    done = True
+            except asyncio.TimeoutError:
+                # Check if pipeline thread crashed
+                if task.done():
+                    exc = task.exception() if not task.cancelled() else None
+                    if exc:
+                        yield _sse_event("progress", {
+                            "step": "error", "status": "error",
+                            "detail": str(exc),
+                        })
+                    done = True
+
+        yield _sse_event("complete", {"message": "Pipeline complete"})
+        await task
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@app.get("/upload/status")
+async def upload_status():
+    """Return daily upload count and limits."""
+    today = date.today().isoformat()
+    used = _upload_counts[today]
+    return {
+        "daily_limit": UPLOAD_DAILY_LIMIT,
+        "used_today": used,
+        "remaining": UPLOAD_DAILY_LIMIT - used,
+        "max_files_per_upload": UPLOAD_MAX_FILES,
+        "max_size_mb": UPLOAD_MAX_SIZE_MB,
+    }
 
 
 # -- Pipeline triggers --
