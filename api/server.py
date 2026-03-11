@@ -3,14 +3,11 @@
 import asyncio
 import json
 import logging
-import tempfile
-import os
 from collections import defaultdict
 from datetime import date, timedelta
 from pathlib import Path
 from typing import List
 
-import fitz  # PyMuPDF for page count validation
 from fastapi import FastAPI, Request, UploadFile, File
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from google.cloud import storage
@@ -48,6 +45,7 @@ def _check_daily_limit(count: int) -> str | None:
 
 def _validate_pdf(pdf_bytes: bytes, filename: str) -> str | None:
     """Return error message if PDF is invalid, else None."""
+    import fitz
     size_mb = len(pdf_bytes) / (1024 * 1024)
     if size_mb > UPLOAD_MAX_SIZE_MB:
         return f"{filename}: {size_mb:.1f}MB exceeds {UPLOAD_MAX_SIZE_MB}MB limit"

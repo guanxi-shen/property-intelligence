@@ -26,7 +26,7 @@ jobs:
 
       - name: Deploy to Cloud Run
         run: |
-          cat > env-vars.yaml << EOF
+          cat > env-vars.yaml << 'ENVEOF'
           GCP_PROJECT_ID: "${{ secrets.GCP_PROJECT_ID }}"
           GCP_PROJECT_NUMBER: "${{ secrets.GCP_PROJECT_NUMBER }}"
           GOOGLE_CLOUD_REGION: "us-central1"
@@ -40,7 +40,7 @@ jobs:
           DOCUMENT_AI_PROCESSOR_ID: "${{ secrets.DOCUMENT_AI_PROCESSOR_ID }}"
           DOCUMENT_AI_LOCATION: "us"
           credentials_dict: '${{ secrets.CREDENTIALS_DICT }}'
-          EOF
+          ENVEOF
 
           gcloud run deploy property-intelligence \
             --source . \
