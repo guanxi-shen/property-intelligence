@@ -27,18 +27,18 @@ jobs:
       - name: Deploy to Cloud Run
         run: |
           cat > env-vars.yaml << EOF
-          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-          GCP_PROJECT_NUMBER: ${{ secrets.GCP_PROJECT_NUMBER }}
-          GOOGLE_CLOUD_REGION: us-central1
-          BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
-          TEXT_SEARCH_API_ENDPOINT: ${{ secrets.TEXT_SEARCH_API_ENDPOINT }}
-          TEXT_SEARCH_INDEX_ENDPOINT: ${{ secrets.TEXT_SEARCH_INDEX_ENDPOINT }}
-          TEXT_SEARCH_DEPLOYED_INDEX_ID: ${{ secrets.TEXT_SEARCH_DEPLOYED_INDEX_ID }}
-          MULTIMODAL_SEARCH_API_ENDPOINT: ${{ secrets.MULTIMODAL_SEARCH_API_ENDPOINT }}
-          MULTIMODAL_SEARCH_INDEX_ENDPOINT: ${{ secrets.MULTIMODAL_SEARCH_INDEX_ENDPOINT }}
-          MULTIMODAL_SEARCH_DEPLOYED_INDEX_ID: ${{ secrets.MULTIMODAL_SEARCH_DEPLOYED_INDEX_ID }}
-          DOCUMENT_AI_PROCESSOR_ID: ${{ secrets.DOCUMENT_AI_PROCESSOR_ID }}
-          DOCUMENT_AI_LOCATION: us
+          GCP_PROJECT_ID: "${{ secrets.GCP_PROJECT_ID }}"
+          GCP_PROJECT_NUMBER: "${{ secrets.GCP_PROJECT_NUMBER }}"
+          GOOGLE_CLOUD_REGION: "us-central1"
+          BUCKET_NAME: "${{ secrets.BUCKET_NAME }}"
+          TEXT_SEARCH_API_ENDPOINT: "${{ secrets.TEXT_SEARCH_API_ENDPOINT }}"
+          TEXT_SEARCH_INDEX_ENDPOINT: "${{ secrets.TEXT_SEARCH_INDEX_ENDPOINT }}"
+          TEXT_SEARCH_DEPLOYED_INDEX_ID: "${{ secrets.TEXT_SEARCH_DEPLOYED_INDEX_ID }}"
+          MULTIMODAL_SEARCH_API_ENDPOINT: "${{ secrets.MULTIMODAL_SEARCH_API_ENDPOINT }}"
+          MULTIMODAL_SEARCH_INDEX_ENDPOINT: "${{ secrets.MULTIMODAL_SEARCH_INDEX_ENDPOINT }}"
+          MULTIMODAL_SEARCH_DEPLOYED_INDEX_ID: "${{ secrets.MULTIMODAL_SEARCH_DEPLOYED_INDEX_ID }}"
+          DOCUMENT_AI_PROCESSOR_ID: "${{ secrets.DOCUMENT_AI_PROCESSOR_ID }}"
+          DOCUMENT_AI_LOCATION: "us"
           credentials_dict: '${{ secrets.CREDENTIALS_DICT }}'
           EOF
 
