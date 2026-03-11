@@ -19,41 +19,57 @@ Upload property documents (appraisals, inspections, comparable sales) and ask qu
 
 ## Architecture
 
+```mermaid
+graph TB
+    subgraph "Client"
+        A["Browser<br/><small>Material Design UI</small>"]
+    end
+
+    subgraph "Google Cloud"
+        B["Cloud Storage<br/><small>PDF uploads, page images, metadata</small>"]
+        C["Eventarc"]
+        D["Cloud Run<br/><small>FastAPI</small>"]
+        E["Document AI<br/><small>Layout Parser</small>"]
+        F["Gemini 3.1 Pro<br/><small>Agentic reasoning</small>"]
+        G["Gemini Embedding 2<br/><small>Text + image embeddings</small>"]
+
+        subgraph "Vertex AI Vector Search"
+            H["Text Index<br/><small>Hybrid: dense + TF-IDF sparse</small>"]
+            I["Multimodal Index<br/><small>Page image embeddings</small>"]
+        end
+    end
+
+    A -- "SSE streaming" --> D
+    B -- "object.finalized" --> C
+    C -- "POST /pipeline/trigger" --> D
+    D --> E
+    D --> F
+    D --> G
+    D -- "gRPC" --> H
+    D -- "gRPC" --> I
+    G --> H
+    G --> I
 ```
-                         +------------------+
-                         |   GCS Bucket     |
-                         |  uploads/*.pdf   |
-                         +--------+---------+
-                                  |
-                         Eventarc trigger
-                                  |
-                                  v
-+-------------+    SSE    +-------+--------+    gRPC    +--------------------+
-|   Browser   | <-------> |   Cloud Run    | <--------> | Vertex AI Vector   |
-|  (frontend) |           |   (FastAPI)    |            | Search (2 indexes) |
-+-------------+           +---+----+---+---+            +--------------------+
-                              |    |   |
-                   +----------+    |   +----------+
-                   v               v              v
-              Document AI     Gemini 3.1      Gemini Embedding
-             Layout Parser       Pro              2
-```
 
-### Pipeline (per document)
+### Ingestion Pipeline
 
-1. **Parse** -- Document AI Layout Parser extracts semantic text chunks with structural context
-2. **Render** -- PyMuPDF renders each page to PNG, uploaded to GCS for multimodal search
-3. **Embed** -- Gemini Embedding 2 generates 768-dim vectors for both text chunks and page images
-4. **Index** -- Vectors upserted to Vertex AI Vector Search (text index with TF-IDF hybrid, multimodal index for pages)
+Each uploaded PDF goes through four stages:
 
-### Search (per query)
+| Stage | Service | What it does |
+|-------|---------|-------------|
+| **Parse** | Document AI Layout Parser | Extracts semantic text chunks with structural context (headings, tables) |
+| **Render** | PyMuPDF | Renders each page to 200 DPI PNG, uploads to GCS |
+| **Embed** | Gemini Embedding 2 | Generates 768-dim vectors for text chunks (`RETRIEVAL_DOCUMENT`) and page images |
+| **Index** | Vertex AI Vector Search | Upserts vectors with metadata; text index includes TF-IDF sparse vectors for hybrid search |
+
+### Search
+
+The Gemini agent has two search tools and decides which to call (can use both, multiple rounds):
 
 | Tool | Index | Method | Best for |
 |------|-------|--------|----------|
-| `search_text` | Text (hybrid) | Dense + TF-IDF sparse via RRF fusion | Facts, numbers, addresses |
-| `search_pages` | Multimodal | Dense (image embeddings) | Tables, photos, maps, sketches |
-
-The agent (Gemini 3.1 Pro) decides which tools to call, can search multiple rounds, and produces answers with inline citations linking to specific PDF pages.
+| `search_text` | Text (hybrid) | Dense + TF-IDF sparse via RRF fusion | Facts, numbers, addresses, dollar amounts |
+| `search_pages` | Multimodal (dense) | Image embedding similarity | Tables, photos, maps, floor plans, sketches |
 
 ### Frontend
 
@@ -62,22 +78,10 @@ The agent (Gemini 3.1 Pro) decides which tools to call, can search multiple roun
 - Collapsible panel showing all retrieved documents grouped by source
 - Google Material Design styling
 
-## GCP Services Used
-
-| Service | Purpose |
-|---------|---------|
-| **Cloud Storage** | PDF uploads, page images, embeddings, metadata |
-| **Document AI** | Layout Parser for semantic PDF chunking |
-| **Vertex AI Vector Search** | Two managed indexes (text hybrid + multimodal) |
-| **Gemini 3.1 Pro** | Agentic reasoning with function calling |
-| **Gemini Embedding 2** | Text and image embeddings (shared 768-dim space) |
-| **Cloud Run** | Hosts the FastAPI app |
-| **Eventarc** | Triggers pipeline on new GCS uploads |
-
 ## Project Structure
 
 ```
-property_intelligence/
+property-intelligence/
 |-- api/
 |   `-- server.py              # FastAPI with SSE streaming + pipeline trigger
 |-- frontend/
@@ -97,30 +101,33 @@ property_intelligence/
 |   |-- config.py              # Environment-based configuration
 |   `-- utils.py               # GCS signed URL generation
 |-- scripts/
-|   |-- create_indexes.py      # One-time: provision Vector Search indexes
+|   |-- create_indexes.py      # One-time: provision Vector Search indexes + endpoints
 |   `-- seed_data.py           # One-time: batch process initial PDFs
 |-- .github/workflows/
-|   `-- deploy.yml             # CI/CD: build, deploy to Cloud Run, create Eventarc trigger
+|   `-- deploy.yml             # CI/CD: deploy to Cloud Run + Eventarc trigger
 |-- Dockerfile
 |-- requirements.txt
 `-- .env                       # Local secrets (gitignored)
 ```
 
-## Setup
+## Getting Started
 
 ### Prerequisites
 
 - Google Cloud project with billing enabled
-- `gcloud` CLI authenticated
+- `gcloud` CLI installed and authenticated
 - Python 3.11+
-- APIs enabled:
-  - Cloud Storage
-  - Document AI
-  - Vertex AI
-  - Cloud Run
-  - Eventarc
+- Enable these APIs in your project:
+  ```bash
+  gcloud services enable \
+    storage.googleapis.com \
+    documentai.googleapis.com \
+    aiplatform.googleapis.com \
+    run.googleapis.com \
+    eventarc.googleapis.com
+  ```
 
-### 1. Clone and configure
+### Step 1: Clone and install
 
 ```bash
 git clone https://github.com/guanxi-shen/property-intelligence.git
@@ -128,7 +135,43 @@ cd property-intelligence
 pip install -r requirements.txt
 ```
 
-Create a `.env` file:
+### Step 2: Create a service account
+
+```bash
+gcloud iam service-accounts create property-intelligence \
+  --display-name="Property Intelligence"
+
+# Grant required roles
+SA_EMAIL="property-intelligence@YOUR_PROJECT_ID.iam.gserviceaccount.com"
+
+gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
+  --member="serviceAccount:$SA_EMAIL" \
+  --role="roles/storage.admin"
+
+gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
+  --member="serviceAccount:$SA_EMAIL" \
+  --role="roles/aiplatform.user"
+
+gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
+  --member="serviceAccount:$SA_EMAIL" \
+  --role="roles/documentai.editor"
+
+# Download key
+gcloud iam service-accounts keys create sa-key.json \
+  --iam-account=$SA_EMAIL
+```
+
+### Step 3: Create GCS bucket
+
+```bash
+gsutil mb -l us-central1 gs://your-bucket-name
+```
+
+### Step 4: Create Document AI processor
+
+Go to **Cloud Console > Document AI > Create Processor**, select **Layout Parser**, and note the processor ID.
+
+### Step 5: Create `.env`
 
 ```env
 GCP_PROJECT_ID=your-project-id
@@ -137,6 +180,7 @@ GOOGLE_CLOUD_REGION=us-central1
 
 BUCKET_NAME=your-bucket-name
 
+# Leave blank for now -- Step 6 will populate these
 TEXT_SEARCH_API_ENDPOINT=
 TEXT_SEARCH_INDEX_ENDPOINT=
 TEXT_SEARCH_DEPLOYED_INDEX_ID=
@@ -148,47 +192,62 @@ MULTIMODAL_SEARCH_DEPLOYED_INDEX_ID=
 DOCUMENT_AI_PROCESSOR_ID=your-processor-id
 DOCUMENT_AI_LOCATION=us
 
-credentials_dict={"type":"service_account", ...}
+credentials_dict=<paste contents of sa-key.json as a single line>
 ```
 
-### 2. Create GCS bucket
-
-```bash
-gsutil mb -l us-central1 gs://your-bucket-name
-```
-
-### 3. Create Document AI processor
-
-Go to **Cloud Console > Document AI > Create Processor** and select **Layout Parser**. Copy the processor ID into your `.env`.
-
-### 4. Create Vector Search indexes
+### Step 6: Create Vector Search indexes
 
 ```bash
 python scripts/create_indexes.py
 ```
 
-This provisions two indexes (text + multimodal), creates endpoints, and deploys them. Copy the printed endpoint values into your `.env`. Index deployment takes ~30 minutes.
+This script:
+1. Uploads seed embeddings to GCS (required for index creation)
+2. Creates two Vertex AI Vector Search indexes:
+   - **property-text-index** -- hybrid dense + sparse for text chunks
+   - **property-multimodal-index** -- dense only for page images
+3. Creates public endpoints and deploys indexes to them
+4. Prints the endpoint values to copy into `.env`
 
-### 5. Upload PDFs and run pipeline
+```
+============================================================
+Add these to your .env file:
+============================================================
+TEXT_SEARCH_INDEX_ENDPOINT=projects/123456/locations/us-central1/indexEndpoints/...
+TEXT_SEARCH_API_ENDPOINT=1234567890.us-central1-123456.vdb.vertexai.goog
+TEXT_SEARCH_DEPLOYED_INDEX_ID=property_text_deployed
+
+MULTIMODAL_SEARCH_INDEX_ENDPOINT=projects/123456/locations/us-central1/indexEndpoints/...
+MULTIMODAL_SEARCH_API_ENDPOINT=9876543210.us-central1-123456.vdb.vertexai.goog
+MULTIMODAL_SEARCH_DEPLOYED_INDEX_ID=property_multimodal_deployed
+============================================================
+```
+
+Copy these values into your `.env`. Index deployment takes ~30 minutes.
+
+### Step 7: Upload documents and run pipeline
 
 ```bash
+# Upload PDFs to GCS
 gsutil cp your_documents/*.pdf gs://your-bucket-name/uploads/
+
+# Process all PDFs (parse, render, embed, index)
 python scripts/seed_data.py
 ```
 
-### 6. Run locally
+### Step 8: Run locally
 
 ```bash
 uvicorn api.server:app --host 0.0.0.0 --port 8080
 ```
 
-Open `http://localhost:8080` in your browser.
+Open http://localhost:8080 in your browser.
 
 ## Deploy to Cloud Run
 
 Deployment is automated via GitHub Actions on push to `main`.
 
-### GitHub Secrets Required
+### GitHub Secrets
 
 Add these in **repo Settings > Secrets and variables > Actions**:
 
@@ -196,18 +255,41 @@ Add these in **repo Settings > Secrets and variables > Actions**:
 |--------|-------------|
 | `GCP_PROJECT_ID` | Google Cloud project ID |
 | `GCP_PROJECT_NUMBER` | Google Cloud project number |
-| `CREDENTIALS_DICT` | Service account JSON (used for both gcloud auth and runtime) |
+| `CREDENTIALS_DICT` | Service account JSON (single-line) |
 | `BUCKET_NAME` | GCS bucket name |
-| `TEXT_SEARCH_API_ENDPOINT` | Text index public endpoint domain |
-| `TEXT_SEARCH_INDEX_ENDPOINT` | Text index full resource name |
-| `TEXT_SEARCH_DEPLOYED_INDEX_ID` | Text deployed index ID |
-| `MULTIMODAL_SEARCH_API_ENDPOINT` | Multimodal index public endpoint domain |
-| `MULTIMODAL_SEARCH_INDEX_ENDPOINT` | Multimodal index full resource name |
-| `MULTIMODAL_SEARCH_DEPLOYED_INDEX_ID` | Multimodal deployed index ID |
+| `TEXT_SEARCH_API_ENDPOINT` | From `create_indexes.py` output |
+| `TEXT_SEARCH_INDEX_ENDPOINT` | From `create_indexes.py` output |
+| `TEXT_SEARCH_DEPLOYED_INDEX_ID` | From `create_indexes.py` output |
+| `MULTIMODAL_SEARCH_API_ENDPOINT` | From `create_indexes.py` output |
+| `MULTIMODAL_SEARCH_INDEX_ENDPOINT` | From `create_indexes.py` output |
+| `MULTIMODAL_SEARCH_DEPLOYED_INDEX_ID` | From `create_indexes.py` output |
 | `DOCUMENT_AI_PROCESSOR_ID` | Document AI processor ID |
-| `SERVICE_ACCOUNT_EMAIL` | Service account email for Eventarc |
+| `SERVICE_ACCOUNT_EMAIL` | Service account email (for Eventarc trigger) |
 
-Once secrets are configured, push to `main` to trigger deployment. The workflow builds the Docker image, deploys to Cloud Run, and creates an Eventarc trigger so new PDFs uploaded to GCS are processed automatically.
+Push to `main` to trigger deployment. The workflow:
+1. Builds the container with Cloud Build
+2. Deploys to Cloud Run
+3. Creates an Eventarc trigger so new PDFs in GCS are processed automatically
+
+### Auto-processing
+
+Once deployed, uploading a PDF to `gs://your-bucket/uploads/` triggers the full pipeline automatically via Eventarc. Monitor with:
+
+```bash
+gcloud run logs tail property-intelligence --region=us-central1
+```
+
+## GCP Services
+
+| Service | Purpose |
+|---------|---------|
+| **Cloud Storage** | PDF uploads, page images, embeddings, metadata |
+| **Document AI** | Layout Parser for semantic PDF chunking |
+| **Vertex AI Vector Search** | Two managed indexes (text hybrid + multimodal) |
+| **Gemini 3.1 Pro** | Agentic reasoning with function calling |
+| **Gemini Embedding 2** | Text and image embeddings (shared 768-dim space) |
+| **Cloud Run** | Hosts the FastAPI application |
+| **Eventarc** | Routes GCS upload events to Cloud Run |
 
 ## License
 

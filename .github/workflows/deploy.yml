@@ -4,17 +4,15 @@ on:
   push:
     branches: [main]
 
-env:
-  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  REGION: us-central1
-  SERVICE_NAME: property-intelligence
-
 jobs:
   deploy:
+    name: Deploy to Cloud Run
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
@@ -23,50 +21,56 @@ jobs:
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
-
-      - name: Configure Docker
-        run: gcloud auth configure-docker
-
-      - name: Build and Push
-        run: |
-          docker build -t gcr.io/$PROJECT_ID/$SERVICE_NAME .
-          docker push gcr.io/$PROJECT_ID/$SERVICE_NAME
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
 
       - name: Deploy to Cloud Run
         run: |
-          gcloud run deploy $SERVICE_NAME \
-            --image gcr.io/$PROJECT_ID/$SERVICE_NAME \
-            --region $REGION \
+          cat > env-vars.yaml << EOF
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          GCP_PROJECT_NUMBER: ${{ secrets.GCP_PROJECT_NUMBER }}
+          GOOGLE_CLOUD_REGION: us-central1
+          BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
+          TEXT_SEARCH_API_ENDPOINT: ${{ secrets.TEXT_SEARCH_API_ENDPOINT }}
+          TEXT_SEARCH_INDEX_ENDPOINT: ${{ secrets.TEXT_SEARCH_INDEX_ENDPOINT }}
+          TEXT_SEARCH_DEPLOYED_INDEX_ID: ${{ secrets.TEXT_SEARCH_DEPLOYED_INDEX_ID }}
+          MULTIMODAL_SEARCH_API_ENDPOINT: ${{ secrets.MULTIMODAL_SEARCH_API_ENDPOINT }}
+          MULTIMODAL_SEARCH_INDEX_ENDPOINT: ${{ secrets.MULTIMODAL_SEARCH_INDEX_ENDPOINT }}
+          MULTIMODAL_SEARCH_DEPLOYED_INDEX_ID: ${{ secrets.MULTIMODAL_SEARCH_DEPLOYED_INDEX_ID }}
+          DOCUMENT_AI_PROCESSOR_ID: ${{ secrets.DOCUMENT_AI_PROCESSOR_ID }}
+          DOCUMENT_AI_LOCATION: us
+          credentials_dict: '${{ secrets.CREDENTIALS_DICT }}'
+          EOF
+
+          gcloud run deploy property-intelligence \
+            --source . \
             --platform managed \
+            --region us-central1 \
+            --port 8080 \
             --memory 4Gi \
             --cpu 2 \
-            --timeout 1800 \
             --min-instances 0 \
             --max-instances 5 \
-            --set-env-vars "GCP_PROJECT_ID=$PROJECT_ID" \
-            --set-env-vars "GOOGLE_CLOUD_REGION=$REGION" \
-            --set-env-vars "BUCKET_NAME=${{ secrets.BUCKET_NAME }}" \
-            --set-env-vars "TEXT_SEARCH_API_ENDPOINT=${{ secrets.TEXT_SEARCH_API_ENDPOINT }}" \
-            --set-env-vars "TEXT_SEARCH_INDEX_ENDPOINT=${{ secrets.TEXT_SEARCH_INDEX_ENDPOINT }}" \
-            --set-env-vars "TEXT_SEARCH_DEPLOYED_INDEX_ID=${{ secrets.TEXT_SEARCH_DEPLOYED_INDEX_ID }}" \
-            --set-env-vars "MULTIMODAL_SEARCH_API_ENDPOINT=${{ secrets.MULTIMODAL_SEARCH_API_ENDPOINT }}" \
-            --set-env-vars "MULTIMODAL_SEARCH_INDEX_ENDPOINT=${{ secrets.MULTIMODAL_SEARCH_INDEX_ENDPOINT }}" \
-            --set-env-vars "MULTIMODAL_SEARCH_DEPLOYED_INDEX_ID=${{ secrets.MULTIMODAL_SEARCH_DEPLOYED_INDEX_ID }}" \
-            --set-env-vars "DOCUMENT_AI_PROCESSOR_ID=${{ secrets.DOCUMENT_AI_PROCESSOR_ID }}" \
-            --set-env-vars "DOCUMENT_AI_LOCATION=us" \
-            --set-env-vars "GCP_PROJECT_NUMBER=${{ secrets.GCP_PROJECT_NUMBER }}" \
-            --set-env-vars "credentials_dict=${{ secrets.CREDENTIALS_DICT }}" \
-            --allow-unauthenticated
+            --concurrency 40 \
+            --timeout 1800 \
+            --execution-environment gen2 \
+            --allow-unauthenticated \
+            --env-vars-file env-vars.yaml
 
       - name: Create Eventarc Trigger
         run: |
           gcloud eventarc triggers describe property-upload-trigger \
-            --location=$REGION 2>/dev/null || \
+            --location=us-central1 2>/dev/null || \
           gcloud eventarc triggers create property-upload-trigger \
-            --location=$REGION \
-            --destination-run-service=$SERVICE_NAME \
-            --destination-run-region=$REGION \
+            --location=us-central1 \
+            --destination-run-service=property-intelligence \
+            --destination-run-region=us-central1 \
             --destination-run-path=/pipeline/trigger \
             --event-filters="type=google.cloud.storage.object.v1.finalized" \
             --event-filters="bucket=${{ secrets.BUCKET_NAME }}" \
             --service-account=${{ secrets.SERVICE_ACCOUNT_EMAIL }}
+
+      - name: Get Service URL
+        run: |
+          SERVICE_URL=$(gcloud run services describe property-intelligence --region=us-central1 --format='value(status.url)')
+          echo "Deployed to: $SERVICE_URL"
