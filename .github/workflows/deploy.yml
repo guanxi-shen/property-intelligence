@@ -26,7 +26,7 @@ jobs:
 
       - name: Deploy to Cloud Run
         run: |
-          cat > env-vars.yaml << 'ENVEOF'
+          cat > env-vars.yaml << EOF
           GCP_PROJECT_ID: "${{ secrets.GCP_PROJECT_ID }}"
           GCP_PROJECT_NUMBER: "${{ secrets.GCP_PROJECT_NUMBER }}"
           GOOGLE_CLOUD_REGION: "us-central1"
@@ -40,8 +40,9 @@ jobs:
           DOCUMENT_AI_PROCESSOR_ID: "${{ secrets.DOCUMENT_AI_PROCESSOR_ID }}"
           DOCUMENT_AI_LOCATION: "us"
           credentials_dict: '${{ secrets.CREDENTIALS_DICT }}'
-          ENVEOF
+          EOF
 
+          cat env-vars.yaml
           gcloud run deploy property-intelligence \
             --source . \
             --platform managed \
@@ -49,6 +50,7 @@ jobs:
             --port 8080 \
             --memory 4Gi \
             --cpu 2 \
+            --cpu-boost \
             --min-instances 0 \
             --max-instances 5 \
             --concurrency 40 \
