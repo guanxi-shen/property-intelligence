@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Property Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Google+Sans+Text:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --blue-600: #1a73e8;
+  --blue-700: #1557b0;
+  --blue-50: #e8f0fe;
+  --blue-100: #d2e3fc;
+  --grey-50: #f8f9fa;
+  --grey-100: #f1f3f4;
+  --grey-200: #e8eaed;
+  --grey-300: #dadce0;
+  --grey-500: #9aa0a6;
+  --grey-700: #5f6368;
+  --grey-800: #3c4043;
+  --grey-900: #202124;
+  --surface: #ffffff;
+  --bg: #f0f4f9;
+  --shadow-sm: 0 1px 2px rgba(60,64,67,0.1);
+  --shadow-md: 0 1px 3px rgba(60,64,67,0.15), 0 1px 2px rgba(60,64,67,0.1);
+  --shadow-lg: 0 4px 12px rgba(60,64,67,0.15);
+  --radius: 12px;
+  --radius-lg: 20px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Google Sans Text', 'Google Sans', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); height: 100vh; display: flex; flex-direction: column; color: var(--grey-900); }
+
+/* Header */
+header {
+  background: var(--surface);
+  color: var(--grey-900);
+  padding: 14px 24px;
+  font-size: 16px;
+  font-weight: 500;
+  font-family: 'Google Sans', sans-serif;
+  border-bottom: 1px solid var(--grey-200);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.header-icon {
+  width: 28px; height: 28px;
+  background: var(--blue-600);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-weight: 700; font-size: 14px;
+}
+header .subtitle { color: var(--grey-500); font-weight: 400; font-size: 14px; }
+
+/* Layout */
+#main { flex: 1; display: flex; overflow: hidden; }
+#chat-col { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+/* PDF viewer */
+#viewer-col {
+  width: 0; overflow: hidden;
+  border-left: 1px solid var(--grey-200);
+  background: var(--surface);
+  display: flex; flex-direction: column;
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+#viewer-col.open { width: 50%; }
+#viewer-header {
+  padding: 12px 16px;
+  background: var(--grey-50);
+  border-bottom: 1px solid var(--grey-200);
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 13px; font-weight: 500; color: var(--grey-800);
+}
+#viewer-close {
+  background: none; border: none; font-size: 18px; cursor: pointer;
+  color: var(--grey-500); width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+}
+#viewer-close:hover { background: var(--grey-100); color: var(--grey-800); }
+#pdf-frame { flex: 1; border: none; width: 100%; }
+
+/* Chat area */
+#chat-area {
+  flex: 1; overflow-y: auto;
+  padding: 24px 24px 16px;
+  display: flex; flex-direction: column; gap: 20px;
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Messages */
+.msg {
+  padding: 14px 18px;
+  border-radius: var(--radius);
+  line-height: 1.65;
+  font-size: 14px;
+  word-wrap: break-word;
+  animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+.msg.user {
+  align-self: flex-end;
+  background: var(--blue-600);
+  color: white;
+  border-bottom-right-radius: 4px;
+  max-width: 75%;
+  font-weight: 400;
+}
+.msg.assistant {
+  align-self: flex-start;
+  background: var(--surface);
+  color: var(--grey-900);
+  border-bottom-left-radius: 4px;
+  box-shadow: var(--shadow-sm);
+  max-width: 100%;
+  width: 100%;
+}
+
+/* Streaming: thinking - single line, no container */
+.stream-thinking {
+  font-size: 13px;
+  color: var(--grey-500);
+  font-style: italic;
+  margin-bottom: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.5;
+}
+
+/* Streaming: tool status */
+.stream-status {
+  font-size: 13px;
+  color: var(--blue-600);
+  padding: 6px 0;
+  display: flex; align-items: center; gap: 8px;
+}
+.stream-status::before {
+  content: '';
+  width: 14px; height: 14px;
+  border: 2px solid var(--blue-600);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Answer text */
+.stream-answer { line-height: 1.7; }
+.stream-answer strong { font-weight: 600; }
+.stream-answer ul, .stream-answer ol { margin: 8px 0 8px 20px; }
+.stream-answer li { margin-bottom: 4px; }
+
+/* Citations */
+.cite-link {
+  color: var(--blue-600);
+  text-decoration: none;
+  cursor: pointer;
+  background: var(--blue-50);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+.cite-link:hover { background: var(--blue-100); }
+
+/* Retrieved docs */
+.retrieved-panel {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--grey-200);
+}
+.retrieved-toggle {
+  font-size: 12px; color: var(--grey-700);
+  cursor: pointer;
+  display: flex; align-items: center; gap: 6px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  padding: 4px 0;
+  user-select: none;
+}
+.retrieved-toggle:hover { color: var(--blue-600); }
+.retrieved-toggle .arrow {
+  display: inline-block;
+  font-size: 10px;
+  transition: transform 0.2s;
+}
+.retrieved-panel.open .retrieved-toggle .arrow { transform: rotate(90deg); }
+.retrieved-body { display: none; margin-top: 10px; }
+.retrieved-panel.open .retrieved-body { display: block; }
+
+.doc-group { margin-bottom: 8px; }
+.doc-name {
+  font-size: 13px; font-weight: 500;
+  color: var(--grey-800);
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 6px;
+  display: flex; align-items: center; gap: 6px;
+  transition: background 0.15s;
+}
+.doc-name:hover { background: var(--grey-100); }
+.doc-name .arrow { font-size: 9px; transition: transform 0.2s; color: var(--grey-500); }
+.doc-group.open .doc-name .arrow { transform: rotate(90deg); }
+.doc-name .count { color: var(--grey-500); font-weight: 400; font-size: 12px; }
+.doc-pages { display: none; padding: 6px 8px 6px 28px; }
+.doc-group.open .doc-pages { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.page-chip {
+  background: var(--grey-100);
+  color: var(--grey-700);
+  border: 1px solid var(--grey-200);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.15s;
+}
+.page-chip:hover { background: var(--blue-50); color: var(--blue-600); border-color: var(--blue-100); }
+.page-chip.active { background: var(--blue-600); color: white; border-color: var(--blue-600); }
+
+/* Input */
+#input-area {
+  padding: 16px 24px 20px;
+  background: var(--bg);
+  display: flex; gap: 12px;
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto;
+}
+#input {
+  flex: 1;
+  padding: 14px 20px;
+  border: 1px solid var(--grey-300);
+  border-radius: var(--radius-lg);
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+#input:focus { border-color: var(--blue-600); box-shadow: 0 0 0 2px var(--blue-50); }
+#input::placeholder { color: var(--grey-500); }
+#send-btn {
+  background: var(--blue-600);
+  color: white;
+  border: none;
+  border-radius: var(--radius-lg);
+  padding: 14px 28px;
+  font-size: 14px;
+  font-family: 'Google Sans', sans-serif;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: background 0.15s, box-shadow 0.15s;
+}
+#send-btn:hover { background: var(--blue-700); box-shadow: var(--shadow-md); }
+#send-btn:disabled { background: var(--grey-300); color: var(--grey-500); cursor: not-allowed; box-shadow: none; }
+
+/* Scrollbar */
+#chat-area::-webkit-scrollbar { width: 6px; }
+#chat-area::-webkit-scrollbar-thumb { background: var(--grey-300); border-radius: 3px; }
+#chat-area::-webkit-scrollbar-thumb:hover { background: var(--grey-500); }
+</style>
+</head>
+<body>
+<header>
+  <div class="header-icon">P</div>
+  Property Intelligence
+  <span class="subtitle">Valuation Assistant</span>
+</header>
+
+<div id="main">
+  <div id="chat-col">
+    <div id="chat-area">
+      <div class="msg assistant"><div class="stream-answer">Hello! I can help you analyze property documents. Ask me about property valuations, comparable sales, market data, or any information from your uploaded documents.</div></div>
+    </div>
+    <div id="input-area">
+      <input id="input" type="text" placeholder="Ask about property valuations..." autocomplete="off">
+      <button id="send-btn" onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+  <div id="viewer-col">
+    <div id="viewer-header">
+      <strong id="viewer-title">Document Viewer</strong>
+      <button id="viewer-close" onclick="closeViewer()">&times;</button>
+    </div>
+    <iframe id="pdf-frame"></iframe>
+  </div>
+</div>
+
+<script>
+const chatArea = document.getElementById('chat-area');
+const input = document.getElementById('input');
+const sendBtn = document.getElementById('send-btn');
+const viewerCol = document.getElementById('viewer-col');
+const viewerTitle = document.getElementById('viewer-title');
+const pdfFrame = document.getElementById('pdf-frame');
+const sessionId = 'session_' + Date.now();
+
+let latestCitations = [];
+let activeChip = null;
+
+input.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+
+function openViewer(pdfUrl, label) {
+  pdfFrame.src = pdfUrl;
+  viewerTitle.textContent = label;
+  viewerCol.classList.add('open');
+}
+
+function closeViewer() {
+  viewerCol.classList.remove('open');
+  pdfFrame.src = '';
+  if (activeChip) { activeChip.classList.remove('active'); activeChip = null; }
+}
+
+function onPageChipClick(btn, pdfUrl, label) {
+  if (activeChip) activeChip.classList.remove('active');
+  btn.classList.add('active');
+  activeChip = btn;
+  openViewer(pdfUrl, label);
+}
+
+let latestRetrievedDocs = [];
+
+function onCiteClick(sourcePdf, page) {
+  const norm = sourcePdf.toLowerCase().replace(/_/g, ' ').replace('.pdf', '');
+  // Search citations first, then all retrieved docs
+  const allDocs = [...latestCitations, ...latestRetrievedDocs];
+  const cite = allDocs.find(c => {
+    const cn = (c.source_pdf || '').toLowerCase().replace(/_/g, ' ').replace('.pdf', '');
+    return cn === norm && c.page_number === page;
+  });
+  if (cite && cite.pdf_url) {
+    openViewer(cite.pdf_url, cite.source_pdf + ' - Page ' + page);
+  }
+}
+
+function escapeHtml(text) {
+  const d = document.createElement('div');
+  d.textContent = text;
+  return d.innerHTML;
+}
+
+// Return only the portion of text safe to render (hides incomplete markdown links)
+function getRenderableText(text) {
+  // Find last '[' that might be the start of an incomplete [label](url)
+  const lastBracket = text.lastIndexOf('[');
+  if (lastBracket === -1) return text;
+
+  const tail = text.slice(lastBracket);
+  // Complete link pattern present -> safe to render all
+  if (/\[[^\]]*\]\([^)]*\)/.test(tail)) return text;
+  // No '[' opened -> safe
+  if (!/\[/.test(tail)) return text;
+  // Incomplete link in progress -> render up to the '['
+  return text.slice(0, lastBracket);
+}
+
+function renderAnswerHtml(text) {
+  let html = escapeHtml(text);
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  // Citation with URL: [label, p.N](url)
+  html = html.replace(/\[([^\]]*?),\s*p\.?\s*(\d+)\]\([^)]+\)/g, (m, label, page) => {
+    const s = label.trim().replace(/'/g, "\\'");
+    return '<a class="cite-link" onclick="onCiteClick(\'' + s + '\', ' + page + ')">' + escapeHtml(label.trim()) + ', p.' + page + '</a>';
+  });
+  // Citation without URL: [label, p.N]
+  html = html.replace(/\[([^\]]*?),\s*p\.?\s*(\d+)\]/g, (m, label, page) => {
+    const s = label.trim().replace(/'/g, "\\'");
+    return '<a class="cite-link" onclick="onCiteClick(\'' + s + '\', ' + page + ')">' + escapeHtml(label.trim()) + ', p.' + page + '</a>';
+  });
+  // Other markdown links
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color:var(--blue-600)">$1</a>');
+  html = html.replace(/\n/g, '<br>');
+  return html;
+}
+
+function buildRetrievedPanel(docs) {
+  if (!docs || docs.length === 0) return '';
+  const groups = {};
+  docs.forEach(d => {
+    const pdf = d.source_pdf || 'Unknown';
+    if (!groups[pdf]) groups[pdf] = [];
+    if (!groups[pdf].some(p => p.page_number === d.page_number)) groups[pdf].push(d);
+  });
+  Object.values(groups).forEach(pages => pages.sort((a, b) => a.page_number - b.page_number));
+
+  const pid = 'rp_' + Math.random().toString(36).slice(2, 8);
+  let html = '<div class="retrieved-panel" id="' + pid + '">';
+  html += '<div class="retrieved-toggle" onclick="document.getElementById(\'' + pid + '\').classList.toggle(\'open\')"><span class="arrow">&#9654;</span> Retrieved Documents &middot; ' + docs.length + ' pages from ' + Object.keys(groups).length + ' files</div>';
+  html += '<div class="retrieved-body">';
+  for (const [pdf, pages] of Object.entries(groups)) {
+    const gid = 'dg_' + Math.random().toString(36).slice(2, 8);
+    html += '<div class="doc-group" id="' + gid + '">';
+    html += '<div class="doc-name" onclick="document.getElementById(\'' + gid + '\').classList.toggle(\'open\')"><span class="arrow">&#9654;</span> ' + escapeHtml(pdf) + ' <span class="count">(' + pages.length + ')</span></div>';
+    html += '<div class="doc-pages">';
+    pages.forEach(p => {
+      const u = (p.pdf_url || '').replace(/'/g, "\\'");
+      const l = (pdf + ' - Page ' + p.page_number).replace(/'/g, "\\'");
+      html += '<button class="page-chip" onclick="onPageChipClick(this, \'' + u + '\', \'' + l + '\')">p.' + p.page_number + '</button>';
+    });
+    html += '</div></div>';
+  }
+  html += '</div></div>';
+  return html;
+}
+
+function scrollChat() { chatArea.scrollTop = chatArea.scrollHeight; }
+
+async function sendMessage() {
+  const text = input.value.trim();
+  if (!text) return;
+
+  input.value = '';
+  sendBtn.disabled = true;
+
+  const userDiv = document.createElement('div');
+  userDiv.className = 'msg user';
+  userDiv.textContent = text;
+  chatArea.appendChild(userDiv);
+
+  const msgDiv = document.createElement('div');
+  msgDiv.className = 'msg assistant';
+
+  const thinkingDiv = document.createElement('div');
+  thinkingDiv.className = 'stream-thinking';
+  thinkingDiv.textContent = 'Thinking...';
+  msgDiv.appendChild(thinkingDiv);
+
+  const statusDiv = document.createElement('div');
+  statusDiv.className = 'stream-status';
+  statusDiv.style.display = 'none';
+  msgDiv.appendChild(statusDiv);
+
+  const answerDiv = document.createElement('div');
+  answerDiv.className = 'stream-answer';
+  msgDiv.appendChild(answerDiv);
+
+  chatArea.appendChild(msgDiv);
+  scrollChat();
+
+  let thinkingText = '';
+  let answerText = '';
+
+  try {
+    const res = await fetch('/chat/stream', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({message: text, session_id: sessionId}),
+    });
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, {stream: true});
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      let eventType = '';
+      for (const line of lines) {
+        if (line.startsWith('event: ')) {
+          eventType = line.slice(7);
+        } else if (line.startsWith('data: ') && eventType) {
+          const data = JSON.parse(line.slice(6));
+          if (eventType === 'thinking') {
+            thinkingText += data;
+            const firstLine = thinkingText.trim().split('\n')[0].slice(0, 150);
+            thinkingDiv.textContent = firstLine;
+          } else if (eventType === 'text') {
+            answerText += data;
+            answerDiv.innerHTML = renderAnswerHtml(getRenderableText(answerText));
+          } else if (eventType === 'tool_call') {
+            statusDiv.style.display = 'flex';
+            statusDiv.textContent = data === 'search_text' ? 'Searching documents...' : data === 'search_pages' ? 'Searching page images...' : 'Calling ' + data + '...';
+          } else if (eventType === 'tool_result') {
+            statusDiv.textContent = data || 'Processing results...';
+          } else if (eventType === 'done') {
+            latestCitations = data.citations || [];
+            latestRetrievedDocs = data.retrieved_docs || [];
+            statusDiv.style.display = 'none';
+            if (!thinkingText && !data.thinking) {
+              thinkingDiv.style.display = 'none';
+            } else if (data.thinking) {
+              thinkingDiv.textContent = data.thinking;
+            }
+            const finalAnswer = data.answer || answerText;
+            answerDiv.innerHTML = renderAnswerHtml(finalAnswer);
+            answerDiv.innerHTML += buildRetrievedPanel(data.retrieved_docs);
+          }
+          eventType = '';
+          scrollChat();
+        }
+      }
+    }
+  } catch (err) {
+    answerDiv.innerHTML = '<em style="color:var(--grey-500)">Connection error. Please try again.</em>';
+    thinkingDiv.style.display = 'none';
+    statusDiv.style.display = 'none';
+  }
+
+  sendBtn.disabled = false;
+  input.focus();
+}
+</script>
+</body>
+</html>
