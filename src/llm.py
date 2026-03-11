@@ -154,7 +154,7 @@ class GeminiLLM:
     def _build_function_response_parts(self, fc, result):
         """Build function response Part(s), attaching page images via FunctionResponseFileData.
 
-        For search_pages results containing gcs_uri, each page image is attached
+        For search_page_img results containing gcs_uri, each page image is attached
         as a FunctionResponsePart with file_data, and referenced in the JSON via
         {"$ref": "display_name"} so the model can map metadata to visual content.
 

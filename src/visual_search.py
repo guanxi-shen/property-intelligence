@@ -87,7 +87,7 @@ class PageSearchClient:
             print(f"[PageSearch] Signed URL error for {gcs_uri}: {e}")
             return ""
 
-    def batch_search_pages(self, queries, neighbor_count=8, diversity_balance=0.5):
+    def batch_search_page_img(self, queries, neighbor_count=8, diversity_balance=0.5):
         """Search page image index for multiple queries.
 
         Crowding tag limits results per source PDF so diverse documents

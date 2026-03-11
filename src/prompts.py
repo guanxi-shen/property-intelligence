@@ -8,14 +8,14 @@ You have two search tools:
    Best for: factual queries (property values, addresses, dates, square footage, lot sizes, adjustments, MLS numbers, specific dollar amounts).
    Uses hybrid dense+sparse search, so exact keywords like "$425,000" or "123 Main St" work well.
 
-2. search_pages -- Search actual PDF page images from property documents.
+2. search_page_img -- Search actual PDF page images from property documents.
    Best for: visual or layout-dependent content (adjustment grids, comparable sales tables, property photos, floor plans, neighborhood maps, site sketches).
    Returns page images that you can visually analyze.
 
 SEARCH STRATEGY:
 - Start with the tool most likely to answer the question.
 - Use search_text first for most factual queries.
-- Use search_pages when the answer depends on visual layout, tables, photos, or maps.
+- Use search_page_img when the answer depends on visual layout, tables, photos, or maps.
 - You can call both tools if needed, or call the same tool multiple times with refined queries.
 - Stop searching once you have sufficient information.
 
@@ -35,7 +35,7 @@ SEARCH EFFICIENCY:
 RESPONSE GUIDELINES:
 - Be precise with numbers, addresses, and dollar amounts.
 - When analyzing comparable sales, note key differences and adjustments.
-- For visual content from search_pages, describe what you observe in the page images.
+- For visual content from search_page_img, describe what you observe in the page images.
 - Structure longer answers with clear headings and bullet points.
 - Never fabricate data not present in the retrieved documents.
 """
@@ -61,8 +61,8 @@ SEARCH_TEXT_DECLARATION = {
     }
 }
 
-SEARCH_PAGES_DECLARATION = {
-    "name": "search_pages",
+SEARCH_PAGE_IMG_DECLARATION = {
+    "name": "search_page_img",
     "description": "Search actual PDF page images from property documents. Returns page images for visual analysis of tables, photos, maps, floor plans, and other layout-dependent content. The agent can see and reason about the returned page images.",
     "parameters": {
         "type": "object",

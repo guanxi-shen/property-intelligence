@@ -39,11 +39,11 @@ Property queries often involve exact values -- "$425,000", "123 Main St", "MLS #
 
 **4. Agentic reasoning with self-retry and discovery**
 
-Rather than dumping all retrieved context into a single prompt, a Gemini 3.1 Pro agent with function calling autonomously plans its search strategy. It formulates diverse queries (mixing semantic and keyword phrasings), evaluates the results, and if they're insufficient, refines its queries and searches again -- up to 3 rounds per tool. Cross-round deduplication ensures repeated searches surface new information rather than redundant results. The agent can call `search_text` for factual lookups, `search_pages` for visual analysis, or both in sequence, deciding on the fly based on what it finds. Every claim in the response is inline-cited to a specific PDF page.
+Rather than dumping all retrieved context into a single prompt, a Gemini 3.1 Pro agent with function calling autonomously plans its search strategy. It formulates diverse queries (mixing semantic and keyword phrasings), evaluates the results, and if they're insufficient, refines its queries and searches again -- up to 3 rounds per tool. Cross-round deduplication ensures repeated searches surface new information rather than redundant results. The agent can call `search_text` for factual lookups, `search_page_img` for visual analysis, or both in sequence, deciding on the fly based on what it finds. Every claim in the response is inline-cited to a specific PDF page.
 
 **5. Multimodal document analysis**
 
-When the agent retrieves page images via `search_pages`, Gemini doesn't just return metadata -- it visually analyzes the actual page renders. Adjustment grids, floor plans, property photos, and scanned forms are passed as image content directly into the model's context via `FunctionResponseFileData`. This means the agent can read values from a comparable sales grid, describe what it sees in a property photo, or trace lines on a plat map -- answering questions that pure text retrieval would miss entirely.
+When the agent retrieves page images via `search_page_img`, Gemini doesn't just return metadata -- it visually analyzes the actual page renders. Adjustment grids, floor plans, property photos, and scanned forms are passed as image content directly into the model's context via `FunctionResponseFileData`. This means the agent can read values from a comparable sales grid, describe what it sees in a property photo, or trace lines on a plat map -- answering questions that pure text retrieval would miss entirely.
 
 **6. Self-service document ingestion**
 
@@ -64,7 +64,7 @@ The system includes a browser-based upload flow where users drop PDFs and watch 
 |       v                                                        |
 |  Gemini 3.1 Pro Agent (function calling, multi-round)          |
 |       |                    |                                   |
-|       | search_text        | search_pages                     |
+|       | search_text        | search_page_img                     |
 |       v                    v                                   |
 |  +-----------+   +----------------+                            |
 |  | Text      |   | Multimodal     |                            |
@@ -119,7 +119,7 @@ The system includes a browser-based upload flow where users drop PDFs and watch 
        |       v
        |    Agent evaluates results ---> insufficient, refines query
        |
-       +--- Round 2: search_pages(["adjustment grid", "comparable sales table"])
+       +--- Round 2: search_page_img(["adjustment grid", "comparable sales table"])
        |       |
        |       v
        |    Multimodal Index ---> image similarity ---> page PNGs
@@ -176,7 +176,7 @@ The Gemini agent has two search tools and decides which to call (can use both, m
 | Tool | Index | Method | Best for |
 |------|-------|--------|----------|
 | `search_text` | Text (hybrid) | Dense + TF-IDF sparse via RRF fusion (alpha=0.85) | Facts, numbers, addresses, dollar amounts |
-| `search_pages` | Multimodal (dense) | Image embedding similarity with diversity reranking | Tables, photos, maps, floor plans, sketches |
+| `search_page_img` | Multimodal (dense) | Image embedding similarity with diversity reranking | Tables, photos, maps, floor plans, sketches |
 
 ### Frontend
 

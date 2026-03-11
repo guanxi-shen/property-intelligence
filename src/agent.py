@@ -9,7 +9,7 @@ from .config import AGENT_MODEL
 from .llm import GeminiLLM
 from .text_search import TextSearchClient
 from .visual_search import PageSearchClient
-from .prompts import SYSTEM_PROMPT, SEARCH_TEXT_DECLARATION, SEARCH_PAGES_DECLARATION
+from .prompts import SYSTEM_PROMPT, SEARCH_TEXT_DECLARATION, SEARCH_PAGE_IMG_DECLARATION
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +91,7 @@ def search_text(queries: list, neighbor_count: int = 15) -> dict:
     }
 
 
-def search_pages(queries: list, neighbor_count: int = 8, diversity_balance: float = 0.5) -> dict:
+def search_page_img(queries: list, neighbor_count: int = 8, diversity_balance: float = 0.5) -> dict:
     """Search PDF page images from property documents with deduplication across rounds.
 
     Args:
@@ -110,10 +110,10 @@ def search_pages(queries: list, neighbor_count: int = 8, diversity_balance: floa
 
     _page_accumulator["round"] += 1
     current_round = _page_accumulator["round"]
-    logger.info(f"[search_pages] Round {current_round}, queries: {queries[:3]}")
+    logger.info(f"[search_page_img] Round {current_round}, queries: {queries[:3]}")
 
     client = _get_page_client()
-    batch_results = client.batch_search_pages(
+    batch_results = client.batch_search_page_img(
         queries, neighbor_count=neighbor_count, diversity_balance=diversity_balance
     )
 
@@ -154,10 +154,10 @@ class PropertyAgent:
         self.llm = GeminiLLM(
             model_name=AGENT_MODEL,
             system_instruction=SYSTEM_PROMPT,
-            function_declarations=[SEARCH_TEXT_DECLARATION, SEARCH_PAGES_DECLARATION],
+            function_declarations=[SEARCH_TEXT_DECLARATION, SEARCH_PAGE_IMG_DECLARATION],
             function_handlers={
                 "search_text": search_text,
-                "search_pages": search_pages,
+                "search_page_img": search_page_img,
             },
         )
         self.conversation_history: List[tuple] = []

@@ -978,7 +978,7 @@ async function sendMessage() {
             answerDiv.innerHTML = renderAnswerHtml(getRenderableText(answerText));
           } else if (eventType === 'tool_call') {
             statusDiv.style.display = 'flex';
-            statusDiv.textContent = data === 'search_text' ? 'Searching documents...' : data === 'search_pages' ? 'Searching page images...' : 'Calling ' + data + '...';
+            statusDiv.textContent = data === 'search_text' ? 'Searching documents...' : data === 'search_page_img' ? 'Searching page images...' : 'Calling ' + data + '...';
           } else if (eventType === 'tool_result') {
             statusDiv.textContent = data || 'Processing results...';
           } else if (eventType === 'done') {
