@@ -159,7 +159,6 @@ header .spacer { flex: 1; }
   display: none;
 }
 
-/* Pipeline timeline */
 /* Pipeline section - collapsible */
 #pipeline-section { margin-top: 8px; }
 #pipeline-toggle {
@@ -184,65 +183,171 @@ header .spacer { flex: 1; }
 }
 #pipeline-section.open #pipeline-timeline { display: block; }
 
-/* Parallel group */
-.timeline-parallel-group {
-  border: 1px solid var(--grey-200);
-  border-radius: 8px;
-  padding: 10px 12px;
-  margin: 4px 0;
-  background: var(--grey-50);
-  position: relative;
+/* Tree: root node */
+.tree-root {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
-.parallel-label {
-  position: absolute;
-  top: -8px; left: 12px;
-  background: var(--grey-50);
-  padding: 0 6px;
-  font-size: 10px;
+.tree-node {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--surface);
+  border: 1.5px solid var(--grey-200);
+  border-radius: 8px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--grey-500);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  transition: all 0.3s;
+  position: relative;
 }
-.parallel-tracks {
+.tree-node.active { border-color: var(--blue-600); color: var(--grey-900); }
+.tree-node.done { border-color: #34a853; color: var(--grey-900); }
+.tree-node.error { border-color: #d93025; }
+
+.tree-node .tn-icon {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--grey-200);
+  color: var(--grey-500);
+  transition: all 0.3s;
+  position: relative;
+}
+.tree-node.active .tn-icon { background: var(--blue-600); color: white; }
+.tree-node.done .tn-icon { background: #34a853; color: white; }
+.tree-node.error .tn-icon { background: #d93025; color: white; }
+.tree-node.active .tn-icon::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border: 2px solid transparent;
+  border-top-color: var(--blue-600);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+.tn-detail {
+  font-size: 11px;
+  color: var(--grey-500);
+  font-weight: 400;
+  margin-left: 4px;
+}
+
+/* Tree: connector lines */
+.tree-connector-down {
+  width: 2px;
+  height: 16px;
+  background: var(--grey-200);
+  transition: background 0.3s;
+}
+.tree-connector-down.done { background: #34a853; }
+
+/* Tree: fork (V shape) */
+.tree-fork-lines {
   display: flex;
-  gap: 16px;
+  justify-content: center;
+  position: relative;
+  height: 20px;
+  width: 100%;
 }
-.parallel-track {
+.tree-fork-lines::before,
+.tree-fork-lines::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  width: 2px;
+  height: 20px;
+  background: var(--grey-200);
+  transition: background 0.3s;
+}
+.tree-fork-lines::before { left: 25%; transform: rotate(0deg); }
+.tree-fork-lines::after { right: 25%; }
+.tree-fork-lines.left-done::before { background: #34a853; }
+.tree-fork-lines.right-done::after { background: #34a853; }
+
+/* Horizontal bar connecting fork points */
+.tree-fork-bar {
+  width: 50%;
+  height: 2px;
+  background: var(--grey-200);
+  margin: 0 auto;
+  position: relative;
+}
+.tree-fork-bar::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 50%;
+  width: 2px;
+  height: 2px;
+  transform: translateX(-50%);
+}
+
+/* Tree: branches row */
+.tree-branches {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+/* Branch card */
+.tree-branch {
   flex: 1;
+  background: var(--grey-50);
+  border: 1.5px solid var(--grey-200);
+  border-radius: 10px;
+  padding: 10px 10px 6px;
+  transition: border-color 0.3s;
 }
-.parallel-track .timeline-step:not(:last-child)::after {
-  left: 11px;
-  top: 34px;
-  bottom: -2px;
+.tree-branch.active { border-color: var(--blue-600); }
+.tree-branch.done { border-color: #34a853; }
+
+.branch-header {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--grey-500);
+  margin-bottom: 8px;
+  padding-left: 2px;
+  transition: color 0.3s;
 }
+.tree-branch.active .branch-header { color: var(--blue-600); }
+.tree-branch.done .branch-header { color: #34a853; }
+
+/* Steps inside branches */
 .timeline-step {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  padding: 10px 0;
+  gap: 8px;
+  padding: 5px 0;
   position: relative;
 }
 .timeline-step:not(:last-child)::after {
   content: '';
   position: absolute;
-  left: 11px;
-  top: 34px;
-  bottom: -2px;
+  left: 9px;
+  top: 26px;
+  bottom: -1px;
   width: 2px;
   background: var(--grey-200);
 }
 .timeline-step.done:not(:last-child)::after { background: #34a853; }
 .timeline-step.active:not(:last-child)::after {
-  background: linear-gradient(to bottom, #34a853 40%, var(--grey-200) 100%);
+  background: linear-gradient(to bottom, var(--blue-600) 40%, var(--grey-200) 100%);
 }
 
 .ts-icon {
-  width: 24px; height: 24px;
+  width: 20px; height: 20px;
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 600;
   background: var(--grey-200);
   color: var(--grey-500);
@@ -253,7 +358,6 @@ header .spacer { flex: 1; }
 .timeline-step.active .ts-icon {
   background: var(--blue-600);
   color: white;
-  box-shadow: 0 0 0 4px rgba(26,115,232,0.15);
 }
 .timeline-step.done .ts-icon {
   background: #34a853;
@@ -263,32 +367,69 @@ header .spacer { flex: 1; }
   background: #d93025;
   color: white;
 }
-
-.ts-body { flex: 1; min-width: 0; }
-.ts-label {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--grey-500);
-  line-height: 24px;
-}
-.timeline-step.active .ts-label,
-.timeline-step.done .ts-label { color: var(--grey-900); }
-.ts-detail {
-  font-size: 12px;
-  color: var(--grey-500);
-  margin-top: 2px;
-}
-
-/* Active step spinner in icon */
 .timeline-step.active .ts-icon::after {
   content: '';
   position: absolute;
-  inset: -2px;
+  inset: -1px;
   border: 2px solid transparent;
   border-top-color: var(--blue-600);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
+
+.ts-body { flex: 1; min-width: 0; }
+.ts-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--grey-500);
+  line-height: 20px;
+}
+.timeline-step.active .ts-label,
+.timeline-step.done .ts-label { color: var(--grey-900); }
+.ts-detail {
+  font-size: 11px;
+  color: var(--grey-500);
+  margin-top: 1px;
+}
+
+/* Tree: merge lines (mirror of fork) */
+.tree-merge-lines {
+  display: flex;
+  justify-content: center;
+  position: relative;
+  height: 20px;
+  width: 100%;
+}
+.tree-merge-lines::before,
+.tree-merge-lines::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  width: 2px;
+  height: 20px;
+  background: var(--grey-200);
+  transition: background 0.3s;
+}
+.tree-merge-lines::before { left: 25%; }
+.tree-merge-lines::after { right: 25%; }
+.tree-merge-lines.left-done::before { background: #34a853; }
+.tree-merge-lines.right-done::after { background: #34a853; }
+
+.tree-merge-bar {
+  width: 50%;
+  height: 2px;
+  background: var(--grey-200);
+  margin: 0 auto;
+}
+.tree-merge-bar.done { background: #34a853; }
+
+.tree-connector-up {
+  width: 2px;
+  height: 16px;
+  background: var(--grey-200);
+  transition: background 0.3s;
+}
+.tree-connector-up.done { background: #34a853; }
 
 /* Close modal */
 #upload-close {
@@ -559,46 +700,70 @@ header .spacer { flex: 1; }
         <span class="arrow">&#9654;</span> Ingestion Pipeline Steps
       </div>
       <div id="pipeline-timeline">
-      <div class="timeline-step" data-step="upload">
-        <div class="ts-icon">1</div>
-        <div class="ts-body"><div class="ts-label">Upload to Cloud Storage</div><div class="ts-detail"></div></div>
-      </div>
-      <div class="timeline-step" data-step="parse">
-        <div class="ts-icon">2</div>
-        <div class="ts-body"><div class="ts-label">Parse with Document AI Layout Parser</div><div class="ts-detail"></div></div>
-      </div>
-      <div class="timeline-step" data-step="render">
-        <div class="ts-icon">3</div>
-        <div class="ts-body"><div class="ts-label">Render pages to PNG</div><div class="ts-detail"></div></div>
-      </div>
-      <div class="timeline-parallel-group">
-        <div class="parallel-label">Parallel</div>
-        <div class="parallel-tracks">
-          <div class="parallel-track">
+      <div class="tree-root">
+
+        <!-- Root: Upload -->
+        <div class="tree-node" data-step="upload">
+          <div class="tn-icon">1</div>
+          Upload to Cloud Storage
+          <span class="tn-detail" data-detail="upload"></span>
+        </div>
+
+        <!-- Fork connector -->
+        <div class="tree-connector-down" id="fork-stem"></div>
+        <div class="tree-fork-bar" id="fork-bar"></div>
+        <div class="tree-fork-lines" id="fork-lines"></div>
+
+        <!-- Two branches -->
+        <div class="tree-branches">
+          <div class="tree-branch" id="branch-text">
+            <div class="branch-header">Text Pipeline</div>
+            <div class="timeline-step" data-step="parse">
+              <div class="ts-icon">2</div>
+              <div class="ts-body"><div class="ts-label">Document AI Layout Parser</div><div class="ts-detail"></div></div>
+            </div>
             <div class="timeline-step" data-step="embed_text">
-              <div class="ts-icon">4a</div>
-              <div class="ts-body"><div class="ts-label">Generate text embeddings</div><div class="ts-detail"></div></div>
+              <div class="ts-icon">3a</div>
+              <div class="ts-body"><div class="ts-label">Text embeddings</div><div class="ts-detail"></div></div>
             </div>
             <div class="timeline-step" data-step="sparse">
-              <div class="ts-icon">4b</div>
-              <div class="ts-body"><div class="ts-label">Build TF-IDF sparse vectors</div><div class="ts-detail"></div></div>
+              <div class="ts-icon">3b</div>
+              <div class="ts-body"><div class="ts-label">TF-IDF sparse vectors</div><div class="ts-detail"></div></div>
+            </div>
+            <div class="timeline-step" data-step="text_index">
+              <div class="ts-icon">4</div>
+              <div class="ts-body"><div class="ts-label">Update text index</div><div class="ts-detail"></div></div>
             </div>
           </div>
-          <div class="parallel-track">
+          <div class="tree-branch" id="branch-image">
+            <div class="branch-header">Image Pipeline</div>
+            <div class="timeline-step" data-step="render">
+              <div class="ts-icon">2</div>
+              <div class="ts-body"><div class="ts-label">Render pages to PNG</div><div class="ts-detail"></div></div>
+            </div>
             <div class="timeline-step" data-step="embed_images">
-              <div class="ts-icon">4c</div>
-              <div class="ts-body"><div class="ts-label">Generate image embeddings</div><div class="ts-detail"></div></div>
+              <div class="ts-icon">3</div>
+              <div class="ts-body"><div class="ts-label">Image embeddings</div><div class="ts-detail"></div></div>
+            </div>
+            <div class="timeline-step" data-step="mm_index">
+              <div class="ts-icon">4</div>
+              <div class="ts-body"><div class="ts-label">Update multimodal index</div><div class="ts-detail"></div></div>
             </div>
           </div>
         </div>
-      </div>
-      <div class="timeline-step" data-step="index">
-        <div class="ts-icon">5</div>
-        <div class="ts-body"><div class="ts-label">Update Vector Search indexes</div><div class="ts-detail"></div></div>
-      </div>
-      <div class="timeline-step" data-step="finalize">
-        <div class="ts-icon">6</div>
-        <div class="ts-body"><div class="ts-label">Finalize</div><div class="ts-detail"></div></div>
+
+        <!-- Merge connector (mirror of fork) -->
+        <div class="tree-merge-lines" id="merge-lines"></div>
+        <div class="tree-merge-bar" id="merge-bar"></div>
+        <div class="tree-connector-up" id="merge-stem"></div>
+
+        <!-- Done node -->
+        <div class="tree-node" data-step="finalize" id="node-finalize">
+          <div class="tn-icon">&#10003;</div>
+          Ready to query
+          <span class="tn-detail" data-detail="finalize"></span>
+        </div>
+
       </div>
     </div>
     </div>
@@ -862,7 +1027,7 @@ function openUploadModal() {
 
 function closeUploadModal() {
   // Allow closing only if not actively uploading
-  if (uploadStartBtn.disabled && pipelineTimeline.classList.contains('visible')) {
+  if (uploadStartBtn.disabled && pipelineSection.classList.contains('open')) {
     const activeSteps = pipelineTimeline.querySelectorAll('.timeline-step.active');
     if (activeSteps.length > 0) return; // still processing
   }
@@ -879,6 +1044,9 @@ function resetUploadUI() {
     s.className = 'timeline-step';
     s.querySelector('.ts-detail').textContent = '';
   });
+  pipelineTimeline.querySelectorAll('.tree-node').forEach(n => n.className = 'tree-node');
+  document.querySelectorAll('.tree-branch').forEach(b => b.className = 'tree-branch');
+  document.querySelectorAll('.timeline-branch').forEach(b => b.className = 'timeline-branch');
 }
 
 // Drag-and-drop
@@ -942,16 +1110,62 @@ function showUploadError(msg) {
 }
 
 function setStepState(stepName, state, detail) {
-  const el = pipelineTimeline.querySelector('[data-step="' + stepName + '"]');
-  if (!el) return;
-  el.className = 'timeline-step ' + state;
-  if (detail !== undefined) {
-    el.querySelector('.ts-detail').textContent = detail;
+  // Handle tree-node steps (upload, finalize)
+  const treeNode = pipelineTimeline.querySelector('.tree-node[data-step="' + stepName + '"]');
+  if (treeNode) {
+    treeNode.className = 'tree-node ' + state;
+    const detailEl = treeNode.querySelector('.tn-detail');
+    if (detailEl && detail !== undefined) detailEl.textContent = detail;
+    const icon = treeNode.querySelector('.tn-icon');
+    if (state === 'done') icon.innerHTML = '&#10003;';
+    else if (state === 'error') icon.innerHTML = '&#10007;';
   }
-  // Update icon: checkmark for done, X for error
-  const icon = el.querySelector('.ts-icon');
-  if (state === 'done') icon.innerHTML = '&#10003;';
-  else if (state === 'error') icon.innerHTML = '&#10007;';
+
+  // Handle timeline-step steps (inside branches)
+  const stepEl = pipelineTimeline.querySelector('.timeline-step[data-step="' + stepName + '"]');
+  if (stepEl) {
+    stepEl.className = 'timeline-step ' + state;
+    if (detail !== undefined) stepEl.querySelector('.ts-detail').textContent = detail;
+    const icon = stepEl.querySelector('.ts-icon');
+    if (state === 'done') icon.innerHTML = '&#10003;';
+    else if (state === 'error') icon.innerHTML = '&#10007;';
+  }
+
+  // Update branches and connectors
+  updateBranchState('branch-text', ['parse', 'embed_text', 'sparse', 'text_index']);
+  updateBranchState('branch-image', ['render', 'embed_images', 'mm_index']);
+  updateConnectors();
+}
+
+function updateBranchState(branchId, stepNames) {
+  const branch = document.getElementById(branchId);
+  if (!branch) return;
+  const steps = stepNames.map(s => pipelineTimeline.querySelector('[data-step="' + s + '"]'));
+  const allDone = steps.every(s => s && s.classList.contains('done'));
+  const anyActive = steps.some(s => s && s.classList.contains('active'));
+  branch.className = 'tree-branch' + (allDone ? ' done' : anyActive ? ' active' : '');
+}
+
+function updateConnectors() {
+  const uploadDone = pipelineTimeline.querySelector('.tree-node[data-step="upload"]')?.classList.contains('done');
+  const textDone = document.getElementById('branch-text')?.classList.contains('done');
+  const imageDone = document.getElementById('branch-image')?.classList.contains('done');
+  const forkLines = document.getElementById('fork-lines');
+
+  // Fork stem + bar turn green when upload is done
+  document.getElementById('fork-stem').className = 'tree-connector-down' + (uploadDone ? ' done' : '');
+  document.getElementById('fork-bar').className = 'tree-fork-bar' + (uploadDone ? ' done' : '');
+
+  // Fork lines: each side independent
+  forkLines.className = 'tree-fork-lines' + (textDone ? ' left-done' : '') + (imageDone ? ' right-done' : '');
+
+  // Merge lines: each side independent (like fork)
+  document.getElementById('merge-lines').className = 'tree-merge-lines' + (textDone ? ' left-done' : '') + (imageDone ? ' right-done' : '');
+
+  // Merge bar + stem turn green when both branches done
+  const bothDone = textDone && imageDone;
+  document.getElementById('merge-bar').className = 'tree-merge-bar' + (bothDone ? ' done' : '');
+  document.getElementById('merge-stem').className = 'tree-connector-up' + (bothDone ? ' done' : '');
 }
 
 async function startUpload() {
@@ -964,12 +1178,27 @@ async function startUpload() {
 
   // Show timeline
   pipelineSection.classList.add('open');
-  const stepLabels = {upload:'1', parse:'2', render:'3', embed_text:'4a', sparse:'4b', embed_images:'4c', index:'5', finalize:'6'};
+  const stepIcons = {parse:'2', embed_text:'3a', sparse:'3b', text_index:'4', render:'2', embed_images:'3', mm_index:'4'};
   pipelineTimeline.querySelectorAll('.timeline-step').forEach(s => {
     s.className = 'timeline-step';
     s.querySelector('.ts-detail').textContent = '';
-    s.querySelector('.ts-icon').textContent = stepLabels[s.dataset.step] || '';
+    s.querySelector('.ts-icon').textContent = stepIcons[s.dataset.step] || '';
   });
+  // Reset tree nodes
+  pipelineTimeline.querySelectorAll('.tree-node').forEach(n => {
+    n.className = 'tree-node';
+    const d = n.querySelector('.tn-detail'); if (d) d.textContent = '';
+  });
+  pipelineTimeline.querySelector('.tree-node[data-step="upload"] .tn-icon').textContent = '1';
+  pipelineTimeline.querySelector('.tree-node[data-step="finalize"] .tn-icon').innerHTML = '\u2713';
+  document.querySelectorAll('.tree-branch').forEach(b => b.className = 'tree-branch');
+  // Reset connectors
+  document.getElementById('fork-stem').className = 'tree-connector-down';
+  document.getElementById('fork-bar').className = 'tree-fork-bar';
+  document.getElementById('fork-lines').className = 'tree-fork-lines';
+  document.getElementById('merge-lines').className = 'tree-merge-lines';
+  document.getElementById('merge-bar').className = 'tree-merge-bar';
+  document.getElementById('merge-stem').className = 'tree-connector-up';
 
   // Build FormData
   const formData = new FormData();

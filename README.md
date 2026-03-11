@@ -13,6 +13,10 @@
   <img src="https://img.shields.io/badge/Python-3.11-3776AB?style=flat&logo=python&logoColor=white" alt="Python"/>
 </p>
 
+<p align="center">
+  <a href="https://property-intelligence-963905106335.us-central1.run.app"><strong>Live Demo</strong></a>
+</p>
+
 ---
 
 ## Problem
@@ -48,50 +52,55 @@ The system includes a browser-based upload flow where users drop PDFs and watch 
 ## Architecture
 
 ```
- User Browser (Material Design UI)
-       |
-       | SSE streaming (chat + upload progress)
-       v
- +----------------------------------------------------------+
- |  Cloud Run -- FastAPI                                     |
- |                                                           |
- |  /chat/stream ---- Gemini 3.1 Pro Agent                   |
- |                     |            |                         |
- |                     | FC tool    | FC tool                 |
- |                     v            v                         |
- |              search_text   search_pages                    |
- |                  |               |                         |
- |  /upload ---+    |  gRPC         |  gRPC                   |
- |             |    v               v                         |
- |             |  +-------------------------------+           |
- |             |  | Vertex AI Vector Search       |           |
- |             |  |                               |           |
- |             |  |  Text Index     Multimodal    |           |
- |             |  |  (dense +       Index         |           |
- |             |  |   TF-IDF        (dense)       |           |
- |             |  |   sparse)                     |           |
- |             |  +-------------------------------+           |
- |             |           ^               ^                  |
- |             |           |               |                  |
- |             v           |               |                  |
- |  +--- Ingestion Pipeline (parallel) --------+             |
- |  |                                           |             |
- |  |  Document AI -----> Text Chunks           |             |
- |  |  Layout Parser      |         |           |             |
- |  |                     v         v           |             |
- |  |              Gemini Emb 2   TF-IDF        |             |
- |  |              (768-dim)      (sparse)      |             |
- |  |                                           |             |
- |  |  PyMuPDF ---------> Page PNGs             |             |
- |  |  (page render)      |                     |             |
- |  |                     v                     |             |
- |  |              Gemini Emb 2                 |             |
- |  |              (768-dim)                    |             |
- |  +-------------------------------------------+            |
- +----------------------------------------------------------+
-       |
-       v
-   Cloud Storage (PDFs, page images, embeddings, metadata)
+                    User Browser
+                         |
+                         | SSE streaming
+                         v
++----------------------------------------------------------------+
+|  Cloud Run (FastAPI)                                           |
+|                                                                |
+|  POST /chat/stream                                             |
+|       |                                                        |
+|       v                                                        |
+|  Gemini 3.1 Pro Agent (function calling, multi-round)          |
+|       |                    |                                   |
+|       | search_text        | search_pages                     |
+|       v                    v                                   |
+|  +-----------+   +----------------+                            |
+|  | Text      |   | Multimodal     |                            |
+|  | Index     |   | Index          |    Vertex AI Vector Search |
+|  | dense +   |   | dense          |                            |
+|  | sparse    |   |                |                            |
+|  +-----------+   +----------------+                            |
+|       ^                    ^                                   |
+|       |                    |                                   |
+|  POST /upload              |                                   |
+|       |                    |                                   |
+|       v                    |                                   |
+|  Cloud Storage (uploads/)  |                                   |
+|       |                    |                                   |
+|       +----------+---------+                                   |
+|       |  (parallel branches)                                   |
+|       |                    |                                   |
+|  TEXT PIPELINE        IMAGE PIPELINE                           |
+|       |                    |                                   |
+|  Document AI          PyMuPDF                                  |
+|  Layout Parser        page render                              |
+|       |                    |                                   |
+|   +---+---+           Gemini Emb 2                             |
+|   |       |           (dense 768d)                             |
+| Gemini  TF-IDF             |                                   |
+| Emb 2   (sparse)           |                                   |
+|   |       |                |                                   |
+|   +---+---+                |                                   |
+|       |                    |                                   |
+|       v                    v                                   |
+|  Update text index    Update multimodal index                  |
+|       |                    |                                   |
+|       +----------+---------+                                   |
+|                  |                                             |
+|             Finalize                                           |
++----------------------------------------------------------------+
 ```
 
 ### Query Flow
@@ -105,21 +114,22 @@ The system includes a browser-based upload flow where users drop PDFs and watch 
        +--- Round 1: search_text(["property value 123 Main St", "$425,000"])
        |       |
        |       v
-       |    Text Index --- dense + sparse (RRF) ---> ranked chunks with metadata
+       |    Text Index ---> dense + sparse (RRF) ---> ranked chunks
        |       |
        |       v
-       |    Agent evaluates: sufficient? -----> NO
+       |    Agent evaluates results ---> insufficient, refines query
        |
        +--- Round 2: search_pages(["adjustment grid", "comparable sales table"])
        |       |
        |       v
-       |    Multimodal Index --- image similarity ---> page PNGs
+       |    Multimodal Index ---> image similarity ---> page PNGs
        |       |
        |       v
-       |    Agent visually analyzes page images (reads tables, photos, maps)
+       |    Gemini visually analyzes page images
+       |    (reads tables, describes photos, traces plat maps)
        |       |
        |       v
-       |    Agent evaluates: sufficient? -----> YES
+       |    Agent evaluates results ---> sufficient
        |
        v
   Cited Answer (SSE streamed with inline [source.pdf, p.N] citations)
@@ -127,30 +137,35 @@ The system includes a browser-based upload flow where users drop PDFs and watch 
 
 ### Ingestion Pipeline
 
-Each uploaded PDF goes through six stages, with embedding steps running in parallel:
+Two fully independent pipelines run in parallel after upload:
 
 ```
-1. Upload to GCS           sequential
-2. Parse (Document AI)     sequential
-3. Render pages (PyMuPDF)  sequential
-             |
-     +-------+-------+
-     |               |
-4a. Text embed    4c. Image embed      parallel
-4b. TF-IDF sparse                      parallel
-     |               |
-     +-------+-------+
-             |
-5. Update Vector Search indexes
-6. Finalize (move to processed/)
+1. Upload to GCS
+         |
+         +------- TEXT PIPELINE -------+------- IMAGE PIPELINE ------+
+         |                             |                              |
+    2. Document AI Layout Parser       2. Render pages to PNG         |
+         |                             |                              |
+      +--+--+                          3. Image embeddings (768d)     |
+      |     |                          |                              |
+  3a. Dense  3b. TF-IDF               4. Update multimodal index     |
+  embeddings  sparse vectors           |                              |
+      |     |                          +------------------------------+
+      +--+--+                          |
+         |                             |
+    4. Update text index               |
+         |                             |
+         +-----------------------------+
+         |
+    Ready to query
 ```
 
 | Stage | Service | What it does |
 |-------|---------|-------------|
 | **Parse** | Document AI Layout Parser | Extracts semantic text chunks with structural context (headings, tables) |
 | **Render** | PyMuPDF | Renders each page to 200 DPI PNG, uploads to GCS |
-| **Text Embed** | Gemini Embedding 2 | 768-dim dense vectors for text chunks (`RETRIEVAL_DOCUMENT` task type) |
-| **Sparse Embed** | scikit-learn TF-IDF | Sparse vectors for exact keyword matching (addresses, dollar amounts) |
+| **Text Embed** (3a) | Gemini Embedding 2 | 768-dim dense vectors for text chunks (`RETRIEVAL_DOCUMENT` task type) |
+| **Sparse Embed** (3b) | scikit-learn TF-IDF | Sparse vectors for exact keyword matching (addresses, dollar amounts) -- runs parallel with dense |
 | **Image Embed** | Gemini Embedding 2 | 768-dim dense vectors for page images (shared semantic space with text) |
 | **Index** | Vertex AI Vector Search | Upserts vectors with crowding tags and doc_type restricts; merges with existing data, same-filename documents are overwritten |
 

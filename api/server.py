@@ -208,6 +208,7 @@ async def upload_and_process(files: List[UploadFile] = File(...)):
         })
 
     def run_pipeline():
+        from concurrent.futures import ThreadPoolExecutor
         from pipeline.document_ai import parse_pdf
         from pipeline.page_converter import convert_pdf_to_pages
         from pipeline.embedder import embed_text_chunks, embed_page_images, build_sparse_embeddings
@@ -216,10 +217,8 @@ async def upload_and_process(files: List[UploadFile] = File(...)):
         n = len(file_data)
         client = _get_storage()
         bucket = client.bucket(BUCKET_NAME)
-        all_chunks = []
-        all_pages = []
 
-        # Step 1: Upload to GCS
+        # Upload to GCS (shared prerequisite)
         emit("upload", "active", f"Uploading {n} PDF(s) to Cloud Storage")
         for i, (name, raw) in enumerate(file_data):
             blob = bucket.blob(f"{UPLOADS_PREFIX}{name}")
@@ -227,65 +226,76 @@ async def upload_and_process(files: List[UploadFile] = File(...)):
             emit("upload", "active", f"Uploaded {i+1}/{n}: {name}")
         emit("upload", "done", f"{n} file(s) uploaded")
 
-        # Step 2: Parse with Document AI Layout Parser
-        emit("parse", "active", f"Parsing {n} document(s) with Layout Parser")
-        for i, (name, _) in enumerate(file_data):
-            gcs_uri = f"gs://{BUCKET_NAME}/{UPLOADS_PREFIX}{name}"
-            try:
-                chunks = parse_pdf(gcs_uri)
-                for c in chunks:
-                    c["source_pdf"] = name
-                all_chunks.extend(chunks)
-                emit("parse", "active", f"Parsed {i+1}/{n}: {name} ({len(chunks)} chunks)")
-            except Exception as e:
-                emit("parse", "active", f"Parse error on {name}: {e}")
-        emit("parse", "done", f"{len(all_chunks)} chunks extracted")
+        gcs_uris = [(name, f"gs://{BUCKET_NAME}/{UPLOADS_PREFIX}{name}") for name, _ in file_data]
 
-        # Step 3: Render pages to PNG
-        emit("render", "active", f"Rendering pages to PNG")
-        for i, (name, _) in enumerate(file_data):
-            gcs_uri = f"gs://{BUCKET_NAME}/{UPLOADS_PREFIX}{name}"
-            try:
-                pages = convert_pdf_to_pages(gcs_uri)
-                all_pages.extend(pages)
-                emit("render", "active", f"Rendered {i+1}/{n}: {name} ({len(pages)} pages)")
-            except Exception as e:
-                emit("render", "active", f"Render error on {name}: {e}")
-        emit("render", "done", f"{len(all_pages)} page images created")
+        # Two fully independent branches after upload
+        def text_branch():
+            """Parse → Embed text + TF-IDF → Update text index"""
+            all_chunks = []
 
-        # Steps 4-6: Embed text, build sparse, embed images (parallel)
-        from concurrent.futures import ThreadPoolExecutor, as_completed as cf_done
+            emit("parse", "active", f"Parsing {n} document(s) with Layout Parser")
+            for i, (name, uri) in enumerate(gcs_uris):
+                try:
+                    chunks = parse_pdf(uri)
+                    for c in chunks:
+                        c["source_pdf"] = name
+                    all_chunks.extend(chunks)
+                    emit("parse", "active", f"Parsed {i+1}/{n}: {name} ({len(chunks)} chunks)")
+                except Exception as e:
+                    emit("parse", "active", f"Parse error on {name}: {e}")
+            emit("parse", "done", f"{len(all_chunks)} chunks extracted")
 
-        def _do_text_and_sparse():
-            emit("embed_text", "active", f"Embedding {len(all_chunks)} text chunks")
-            result = embed_text_chunks(all_chunks)
-            emit("embed_text", "done", f"{len(result)} text embeddings generated")
-            emit("sparse", "active", "Building TF-IDF sparse vectors for hybrid search")
-            result = build_sparse_embeddings(result)
-            emit("sparse", "done", "Sparse vectors built")
-            return result
+            # Dense and sparse embeddings run in parallel (both read "text", write to different keys)
+            def _dense():
+                emit("embed_text", "active", f"Embedding {len(all_chunks)} text chunks")
+                embed_text_chunks(all_chunks)
+                emit("embed_text", "done", f"{len(all_chunks)} text embeddings generated")
 
-        def _do_images():
+            def _sparse():
+                emit("sparse", "active", "Building TF-IDF sparse vectors")
+                build_sparse_embeddings(all_chunks)
+                emit("sparse", "done", "Sparse vectors built")
+
+            with ThreadPoolExecutor(max_workers=2) as inner_pool:
+                d = inner_pool.submit(_dense)
+                s = inner_pool.submit(_sparse)
+                d.result()
+                s.result()
+
+            emit("text_index", "active", "Updating text search index")
+            update_text_index(all_chunks)
+            emit("text_index", "done", "Text index updated")
+
+        def image_branch():
+            """Render pages → Embed images → Update multimodal index"""
+            all_pages = []
+
+            emit("render", "active", f"Rendering pages to PNG")
+            for i, (name, uri) in enumerate(gcs_uris):
+                try:
+                    pages = convert_pdf_to_pages(uri)
+                    all_pages.extend(pages)
+                    emit("render", "active", f"Rendered {i+1}/{n}: {name} ({len(pages)} pages)")
+                except Exception as e:
+                    emit("render", "active", f"Render error on {name}: {e}")
+            emit("render", "done", f"{len(all_pages)} page images created")
+
             emit("embed_images", "active", f"Embedding {len(all_pages)} page images")
-            result = embed_page_images(all_pages)
-            embedded = sum(1 for p in result if p.get("embedding"))
+            all_pages = embed_page_images(all_pages)
+            embedded = sum(1 for p in all_pages if p.get("embedding"))
             emit("embed_images", "done", f"{embedded} image embeddings generated")
-            return result
+
+            emit("mm_index", "active", "Updating multimodal search index")
+            update_multimodal_index(all_pages)
+            emit("mm_index", "done", "Multimodal index updated")
 
         with ThreadPoolExecutor(max_workers=2) as pool:
-            text_future = pool.submit(_do_text_and_sparse)
-            image_future = pool.submit(_do_images)
-            all_chunks = text_future.result()
-            all_pages = image_future.result()
+            text_future = pool.submit(text_branch)
+            image_future = pool.submit(image_branch)
+            text_future.result()
+            image_future.result()
 
-        # Step 7: Update Vector Search indexes
-        emit("index", "active", "Updating Vector Search indexes")
-        update_text_index(all_chunks)
-        emit("index", "active", "Text index updated, updating multimodal index...")
-        update_multimodal_index(all_pages)
-        emit("index", "done", "Both indexes updated")
-
-        # Step 8: Move to processed
+        # Finalize: move to processed/
         emit("finalize", "active", "Moving files to processed/")
         for name, _ in file_data:
             try:
