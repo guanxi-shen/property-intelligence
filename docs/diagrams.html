@@ -1146,6 +1146,64 @@ h1 {
   color: var(--grey-500);
   white-space: nowrap;
 }
+
+/* ============================================ */
+/* Presentation diagrams (Slides 11-12)         */
+/* ============================================ */
+.pipe-node {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--grey-800);
+  padding: 7px 12px;
+  background: var(--surface);
+  border: 1.5px solid var(--grey-200);
+  border-radius: 8px;
+  white-space: nowrap;
+}
+.pipe-node.blue { border-color: var(--blue-600); background: var(--blue-50); }
+.pipe-node.green { border-color: var(--green-600); background: var(--green-50); }
+.pipe-node.purple { border-color: var(--purple-600); background: var(--purple-50); }
+.pipe-node.orange { border-color: var(--orange-600); background: var(--orange-50); }
+.pipe-sub {
+  font-size: 10px;
+  color: var(--grey-500);
+  font-weight: 400;
+}
+
+.sconn {
+  width: 2px;
+  height: 10px;
+  background: var(--grey-300);
+}
+.dtri {
+  width: 0; height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid var(--grey-300);
+}
+
+.outcome-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-weight: 500;
+}
+.outcome-tag.refine {
+  background: var(--orange-50);
+  color: var(--orange-600);
+  border: 1px solid var(--orange-600);
+}
+.outcome-tag.ok {
+  background: var(--green-50);
+  color: var(--green-600);
+  border: 1px solid var(--green-600);
+}
 </style>
 </head>
 <body>
@@ -1610,6 +1668,585 @@ h1 {
       </div>
 
     </div>
+  </div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- DIAGRAM 4: Ingestion Pipeline Flow           -->
+<!-- (Standalone from System Architecture)        -->
+<!-- ============================================ -->
+<div class="diagram-section">
+  <div class="diagram-title">Ingestion Pipeline Flow</div>
+
+  <div class="arch-full" style="min-width: 500px; padding-bottom: 28px;">
+
+    <!-- Data Sources -->
+    <div class="node" style="border: 1.5px dashed var(--grey-300); flex-direction: column; gap: 4px; padding: 10px 24px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <div class="node-icon grey">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/></svg>
+        </div>
+        Data Sources
+      </div>
+      <div style="font-size: 10px; color: var(--grey-500);">GDrive &middot; Box &middot; OneDrive &middot; SharePoint</div>
+    </div>
+
+    <div class="arch-vconn" style="padding: 6px 0;">
+      <div class="arch-vconn-line" style="height: 14px;"></div>
+      <span class="arch-vconn-label">Connectors &amp; Sync</span>
+      <div class="arch-vconn-line" style="height: 14px;"></div>
+      <svg width="16" height="10" viewBox="0 0 16 10"><polygon points="3,0 8,6 13,0" fill="#dadce0"/></svg>
+    </div>
+
+    <!-- Cloud Storage -->
+    <div class="node orange" style="padding: 10px 24px; background: var(--surface); border-color: var(--orange-600);">
+      <div class="node-icon orange">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/></svg>
+      </div>
+      Cloud Storage
+      <span class="node-sub">PDF uploads</span>
+    </div>
+
+    <div class="arch-vconn" style="padding: 6px 0;">
+      <div class="arch-vconn-line" style="height: 14px;"></div>
+      <span class="arch-vconn-label">Eventarc trigger</span>
+      <div class="arch-vconn-line" style="height: 14px;"></div>
+      <svg width="16" height="10" viewBox="0 0 16 10"><polygon points="3,0 8,6 13,0" fill="#dadce0"/></svg>
+    </div>
+
+    <!-- Cloud Run -->
+    <div class="node blue" style="padding: 10px 24px;">
+      <div class="node-icon blue">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V8l8 5 8-5v10zm-8-7L4 6h16l-8 5z"/></svg>
+      </div>
+      Cloud Run
+      <span class="node-sub">pipeline execution</span>
+    </div>
+
+    <div class="arch-vconn" style="padding: 6px 0;">
+      <div class="arch-vconn-line" style="height: 16px;"></div>
+      <svg width="16" height="10" viewBox="0 0 16 10"><polygon points="3,0 8,6 13,0" fill="#dadce0"/></svg>
+    </div>
+
+    <!-- Ingestion Pipeline container -->
+    <div class="arch-ingest-standalone" style="width: 100%; padding: 22px 16px 16px;">
+      <div class="arch-ingest-standalone-label">Ingestion Pipeline</div>
+
+      <div class="ingest-branches" style="gap: 14px; display: flex; justify-content: center;">
+
+        <!-- Text Pipeline -->
+        <div class="ingest-mini-branch" style="flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; min-height: 160px;">
+          <div class="ingest-mini-header" style="text-align: center;">Text Pipeline</div>
+          <div class="ingest-mini-step" style="white-space: normal; line-height: 1.2; text-align: center;">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="#886FBF" style="flex-shrink:0;"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/></svg>
+            Document AI Layout Parser
+          </div>
+          <div class="ingest-mini-arrow"></div>
+          <div class="ingest-mini-step" style="white-space: normal; line-height: 1.2; text-align: center;">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="#886FBF" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/></svg>
+            Gemini Embedding 2
+          </div>
+          <div class="ingest-mini-arrow"></div>
+          <div class="ingest-mini-step" style="white-space: normal; line-height: 1.2; text-align: center;">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="#ea8600" style="flex-shrink:0;"><path d="M4 14h4v-4H4v4zm0 5h4v-4H4v4zM4 9h4V5H4v4zm5 5h12v-4H9v4zm0 5h12v-4H9v4zM9 5v4h12V5H9z"/></svg>
+            TF-IDF sparse vectors
+          </div>
+          <div class="ingest-mini-arrow"></div>
+          <div class="ingest-mini-step target">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="#34a853" style="flex-shrink:0;"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+            Text Index
+          </div>
+        </div>
+
+        <!-- Image Pipeline -->
+        <div class="ingest-mini-branch" style="flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; min-height: 160px;">
+          <div class="ingest-mini-header" style="text-align: center;">Image Pipeline</div>
+          <div class="ingest-mini-step" style="white-space: normal; line-height: 1.2; text-align: center;">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="#5f6368" style="flex-shrink:0;"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+            PyMuPDF PDF to Image
+          </div>
+          <div class="ingest-mini-arrow"></div>
+          <div class="ingest-mini-step" style="white-space: normal; line-height: 1.2; text-align: center;">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="#886FBF" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/></svg>
+            Gemini Embedding 2
+          </div>
+          <div class="ingest-mini-arrow"></div>
+          <div class="ingest-mini-step target">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="#34a853" style="flex-shrink:0;"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+            Multimodal Index
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="arch-vconn" style="padding: 6px 0;">
+      <div class="arch-vconn-line" style="height: 16px;"></div>
+      <span class="arch-vconn-label">upsert vectors</span>
+      <div class="arch-vconn-line" style="height: 16px;"></div>
+      <svg width="16" height="10" viewBox="0 0 16 10"><polygon points="3,0 8,6 13,0" fill="#dadce0"/></svg>
+    </div>
+
+    <!-- Vertex AI Vector Search -->
+    <div class="retrieval-box" style="width: 100%; justify-content: space-evenly; display: flex; flex-direction: row; gap: 24px; padding: 16px 16px 12px;">
+      <div class="retrieval-label" style="left: 50%; transform: translateX(-50%);">Vertex AI Vector Search</div>
+      <div class="index-item" style="flex: 1; flex-direction: column; align-items: center; gap: 4px; padding: 10px;">
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="#34a853"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+          <span style="font-size: 12px;">Text Index</span>
+        </div>
+        <div class="index-item-sub">hybrid: dense + sparse (RRF)</div>
+      </div>
+      <div class="index-item" style="flex: 1; flex-direction: column; align-items: center; gap: 4px; padding: 10px;">
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="#34a853"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+          <span style="font-size: 12px;">Multimodal Index</span>
+        </div>
+        <div class="index-item-sub">dense image similarity</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- DIAGRAM 5: Dual-Index Retrieval Flow         -->
+<!-- ============================================ -->
+<div class="diagram-section">
+  <div class="diagram-title">Dual-Index Retrieval Strategy</div>
+
+  <div class="arch-full" style="min-width: 660px;">
+
+    <!-- User Query -->
+    <div class="node" style="padding: 10px 24px;">
+      <div class="node-icon grey">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+      </div>
+      User Query
+      <span class="node-sub">"comparable sales adjustments for 742 Evergreen"</span>
+    </div>
+
+    <div class="arch-vconn" style="padding: 4px 0;">
+      <div class="arch-vconn-line" style="height: 14px;"></div>
+      <svg width="16" height="10" viewBox="0 0 16 10"><polygon points="3,0 8,6 13,0" fill="#dadce0"/></svg>
+    </div>
+
+    <!-- Gemini Embedding 2 -->
+    <div class="node purple" style="padding: 10px 24px;">
+      <div class="node-icon purple">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><circle cx="12" cy="12" r="10"/></svg>
+      </div>
+      Gemini Embedding 2
+      <span class="node-sub">768-dim query vector</span>
+    </div>
+
+    <!-- Fork -->
+    <div style="width: 70%; display: flex; flex-direction: column; align-items: center;">
+      <div style="width: 2px; height: 12px; background: var(--grey-300);"></div>
+      <div class="tree-fork-bar" style="width: 100%;"></div>
+      <div class="tree-fork-lines" style="width: 100%;">
+        <div class="left-line"></div>
+        <div class="right-line"></div>
+      </div>
+    </div>
+
+    <!-- Two retrieval paths -->
+    <div style="display: flex; gap: 24px; width: 100%;">
+
+      <!-- LEFT: Text retrieval -->
+      <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0;">
+
+        <div class="pipe-node blue" style="width: 100%; justify-content: center;">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="var(--blue-600)"><circle cx="12" cy="12" r="10"/></svg>
+          Dense + TF-IDF sparse
+        </div>
+        <div class="sconn"></div><div class="dtri"></div>
+        <div class="gap-4"></div>
+
+        <!-- Text Index box -->
+        <div class="retrieval-box" style="width: 100%; gap: 6px; padding: 20px 12px 12px; display: flex; flex-direction: column; align-items: center;">
+          <div class="retrieval-label">Text Index</div>
+
+          <div class="pipe-node green" style="width: 100%; justify-content: center;">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="var(--green-600)"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+            Vertex AI Vector Search
+            <span class="pipe-sub">hybrid</span>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 6px; width: 100%; justify-content: center;">
+            <div class="pipe-node" style="font-size: 11px; padding: 4px 8px;">Dense ANN</div>
+            <span style="font-size: 10px; color: var(--grey-500);">+</span>
+            <div class="pipe-node" style="font-size: 11px; padding: 4px 8px;">Sparse match</div>
+          </div>
+
+          <div class="sconn"></div><div class="dtri"></div>
+
+          <div class="pipe-node orange" style="width: 100%; justify-content: center; font-size: 11px;">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="var(--orange-600)"><path d="M4 14h4v-4H4v4zm0 5h4v-4H4v4zM4 9h4V5H4v4zm5 5h12v-4H9v4zm0 5h12v-4H9v4zM9 5v4h12V5H9z"/></svg>
+            Reciprocal Rank Fusion
+            <span class="pipe-sub">alpha = 0.85</span>
+          </div>
+        </div>
+
+        <div class="sconn"></div><div class="dtri"></div>
+        <div class="gap-4"></div>
+
+        <div class="node blue" style="flex-direction: column; align-items: center; gap: 4px; padding: 10px 14px; width: 100%;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="var(--blue-600)"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/></svg>
+            Text chunks
+          </div>
+          <span class="pipe-sub">facts, dollar values, addresses, clauses</span>
+        </div>
+      </div>
+
+      <!-- RIGHT: Image retrieval -->
+      <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0;">
+
+        <div class="pipe-node purple" style="width: 100%; justify-content: center;">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="var(--purple-600)"><circle cx="12" cy="12" r="10"/></svg>
+          Dense multimodal vector
+        </div>
+        <div class="sconn"></div><div class="dtri"></div>
+        <div class="gap-4"></div>
+
+        <!-- Image Index box -->
+        <div class="retrieval-box" style="width: 100%; gap: 6px; padding: 20px 12px 12px; display: flex; flex-direction: column; align-items: center;">
+          <div class="retrieval-label">Page / Image Index</div>
+
+          <div class="pipe-node green" style="width: 100%; justify-content: center;">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="var(--green-600)"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+            Vertex AI Vector Search
+            <span class="pipe-sub">dense</span>
+          </div>
+
+          <div class="pipe-node" style="width: 100%; justify-content: center; font-size: 11px; padding: 4px 8px;">
+            Image similarity ranking
+          </div>
+
+          <div class="sconn"></div><div class="dtri"></div>
+
+          <div class="pipe-node" style="width: 100%; justify-content: center; font-size: 11px; padding: 4px 8px;">
+            Diversity reranking
+          </div>
+        </div>
+
+        <div class="sconn"></div><div class="dtri"></div>
+        <div class="gap-4"></div>
+
+        <div class="node purple" style="flex-direction: column; align-items: center; gap: 4px; padding: 10px 14px; width: 100%;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="var(--purple-600)"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+            Page images
+          </div>
+          <span class="pipe-sub">grids, floor plans, maps, photos, sketches</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Merge -->
+    <div style="width: 70%; display: flex; flex-direction: column; align-items: center;">
+      <div class="tree-merge-lines" style="width: 100%; height: 16px;">
+        <div class="left-line"></div>
+        <div class="right-line"></div>
+      </div>
+      <div class="tree-merge-bar" style="width: 100%;"></div>
+      <div style="width: 2px; height: 12px; background: var(--grey-300);"></div>
+      <svg width="16" height="10" viewBox="0 0 16 10"><polygon points="3,0 8,6 13,0" fill="#dadce0"/></svg>
+    </div>
+
+    <div class="gap-4"></div>
+
+    <!-- Agent receives both -->
+    <div class="node purple" style="padding: 10px 24px;">
+      <div class="node-icon purple">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+      </div>
+      Gemini 3.1 Pro
+      <span class="node-sub">text + visual evidence in context</span>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- DIAGRAM 6: Embedding and Agent Answer Loop   -->
+<!-- ============================================ -->
+<div class="diagram-section">
+  <div class="diagram-title">Embedding and Agent Design</div>
+
+  <div class="arch-full" style="min-width: 620px; position: relative;">
+
+    <!-- User question -->
+    <div class="node" style="padding: 10px 24px;">
+      <div class="node-icon grey">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+      </div>
+      User Question
+    </div>
+
+    <div class="arch-vconn" style="padding: 4px 0;">
+      <div class="arch-vconn-line" style="height: 14px;"></div>
+      <svg width="16" height="10" viewBox="0 0 16 10"><polygon points="3,0 8,6 13,0" fill="#dadce0"/></svg>
+    </div>
+
+    <!-- Agent Orchestration box -->
+    <div class="fc-side-box" style="width: 100%; border-color: var(--purple-600); background: rgba(136, 111, 191, 0.04); padding: 22px 16px 16px; align-items: center; gap: 0;">
+      <div class="fc-side-label" style="color: var(--purple-600);">Agent Orchestration</div>
+
+      <!-- Gemini reasoning -->
+      <div class="node purple" style="width: 100%; justify-content: center;">
+        <div class="node-icon purple">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+        </div>
+        <div style="text-align: left;">
+          Gemini 3.1 Pro
+          <div class="node-sub" style="margin-left: 0;">Plans queries, evaluates evidence, decides next action</div>
+        </div>
+      </div>
+
+      <!-- Calls / Results arrows -->
+      <div style="display: flex; justify-content: center; align-items: center; gap: 24px; padding: 8px 0; width: 100%;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 10px; color: var(--grey-500);">function calls</span>
+          <svg width="12" height="24" viewBox="0 0 12 24">
+            <line x1="6" y1="0" x2="6" y2="18" stroke="#dadce0" stroke-width="2"/>
+            <polygon points="1,18 6,24 11,18" fill="#dadce0"/>
+          </svg>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <svg width="12" height="24" viewBox="0 0 12 24">
+            <polygon points="1,6 6,0 11,6" fill="#dadce0"/>
+            <line x1="6" y1="6" x2="6" y2="24" stroke="#dadce0" stroke-width="2"/>
+          </svg>
+          <span style="font-size: 10px; color: var(--grey-500);">ranked evidence</span>
+        </div>
+      </div>
+
+      <!-- Two FC tools -->
+      <div style="display: flex; gap: 10px; width: 100%;">
+        <div class="pipe-node blue" style="flex: 1; justify-content: center; flex-direction: column; align-items: center; gap: 2px; padding: 10px;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span class="fc-badge blue">FC</span>
+            <span>search_text()</span>
+          </div>
+          <span class="pipe-sub">dense + TF-IDF sparse</span>
+        </div>
+        <div class="pipe-node purple" style="flex: 1; justify-content: center; flex-direction: column; align-items: center; gap: 2px; padding: 10px;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span class="fc-badge purple">FC</span>
+            <span>search_pages()</span>
+          </div>
+          <span class="pipe-sub">multimodal similarity</span>
+        </div>
+      </div>
+
+      <div class="gap-8"></div>
+
+      <!-- Embedding layer -->
+      <div style="display: flex; gap: 10px; width: 100%; align-items: center;">
+        <div style="flex: 1; height: 2px; background: var(--grey-300);"></div>
+        <div class="pipe-node purple" style="padding: 5px 12px; font-size: 11px;">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="var(--purple-600)"><circle cx="12" cy="12" r="10"/></svg>
+          Gemini Embedding 2
+          <span class="pipe-sub">query embedding</span>
+        </div>
+        <div style="flex: 1; height: 2px; background: var(--grey-300);"></div>
+      </div>
+
+      <div class="gap-8"></div>
+
+      <!-- Two indexes -->
+      <div style="display: flex; gap: 10px; width: 100%;">
+        <div class="pipe-node green" style="flex: 1; justify-content: center; flex-direction: column; align-items: center; gap: 2px; padding: 10px;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="var(--green-600)"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+            Text Index
+          </div>
+          <span class="pipe-sub">hybrid: dense + sparse (RRF)</span>
+        </div>
+        <div class="pipe-node green" style="flex: 1; justify-content: center; flex-direction: column; align-items: center; gap: 2px; padding: 10px;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="var(--green-600)"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+            Multimodal Index
+          </div>
+          <span class="pipe-sub">dense image similarity</span>
+        </div>
+      </div>
+
+      <div class="gap-12"></div>
+
+      <!-- Evaluate -->
+      <div style="display: flex; align-items: center; gap: 10px; width: 100%;">
+        <div style="flex: 1; height: 1.5px; background: var(--grey-200);"></div>
+        <div class="node orange" style="padding: 8px 16px; font-size: 12px;">
+          <div class="node-icon orange" style="width: 20px; height: 20px;">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+          </div>
+          Evaluate sufficiency
+        </div>
+        <div style="flex: 1; height: 1.5px; background: var(--grey-200);"></div>
+      </div>
+
+      <div class="gap-8"></div>
+
+      <!-- Two outcomes -->
+      <div style="display: flex; gap: 16px; width: 100%; justify-content: center;">
+        <div class="outcome-tag refine">Insufficient -- refine queries, search again</div>
+        <div class="outcome-tag ok">Sufficient -- synthesize answer</div>
+      </div>
+
+    </div>
+
+    <!-- Loop-back arrow -->
+    <svg width="48" height="260" style="position: absolute; right: -16px; top: 60px;" viewBox="0 0 48 260">
+      <defs>
+        <marker id="pres-loop-arrow" markerWidth="8" markerHeight="8" refX="4" refY="7" orient="auto">
+          <polygon points="0,8 4,0 8,8" fill="#ea8600" />
+        </marker>
+      </defs>
+      <path d="M 8,250 L 38,250 L 38,10 L 8,10" fill="none" stroke="#ea8600" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#pres-loop-arrow)"/>
+      <text x="44" y="135" font-family="Google Sans, sans-serif" font-size="10" fill="#ea8600" text-anchor="end" transform="rotate(90, 44, 135)">up to 3 rounds</text>
+    </svg>
+
+    <div class="arch-vconn" style="padding: 4px 0;">
+      <div class="arch-vconn-line" style="height: 10px;"></div>
+      <span class="arch-vconn-label">cross-round deduplication</span>
+      <div class="arch-vconn-line" style="height: 10px;"></div>
+      <svg width="16" height="10" viewBox="0 0 16 10"><polygon points="3,0 8,6 13,0" fill="#dadce0"/></svg>
+    </div>
+
+    <!-- Cited Answer -->
+    <div class="node green" style="padding: 10px 24px;">
+      <div class="node-icon green">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+      </div>
+      Cited Answer
+      <span class="node-sub">SSE streamed with inline citations</span>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- DIAGRAM 7: Query Flow with Parallel FC       -->
+<!-- ============================================ -->
+<div class="diagram-section">
+  <div class="diagram-title">Query Flow &mdash; Parallel Function Calling</div>
+
+  <div class="query-container">
+
+    <!-- User question -->
+    <div class="node" style="flex-direction: column; align-items: flex-start; gap: 4px; padding: 12px 18px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <div class="node-icon grey">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+        </div>
+        <span style="font-weight: 500;">User Question</span>
+      </div>
+      <div class="query-text">"What are the comparable sales adjustments for 742 Evergreen Terrace?"</div>
+    </div>
+
+    <div class="tree-connector"></div>
+
+    <!-- Agent planning -->
+    <div class="node purple" style="flex-direction: column; align-items: flex-start; gap: 4px; padding: 12px 18px; width: 100%;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <div class="node-icon purple">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+        </div>
+        <span style="font-weight: 500;">Gemini 3.1 Pro</span>
+        <span class="node-sub">thinking</span>
+      </div>
+      <div class="agent-thought">Need both text data (addresses, prices) and the visual adjustment grid. Call both tools simultaneously.</div>
+    </div>
+
+    <div class="tree-connector"></div>
+
+    <!-- Round 1: Parallel FC -->
+    <div class="query-round active">
+      <div class="round-label">Round 1</div>
+      <div class="round-content">
+
+        <!-- Parallel badge row -->
+        <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+          <span class="fc-badge blue" style="flex-shrink:0;">FC</span>
+          <span class="fc-badge purple" style="flex-shrink:0;">FC</span>
+          <span style="font-size: 12px; color: var(--grey-700); font-weight: 500;">Parallel function calls</span>
+          <span style="font-size: 10px; color: var(--grey-500);">ThreadPoolExecutor</span>
+        </div>
+
+        <!-- Side-by-side tool cards -->
+        <div style="display: flex; gap: 8px; width: 100%;">
+          <div style="flex: 1; background: var(--blue-50); border: 1px solid var(--blue-600); border-radius: 8px; padding: 8px 10px;">
+            <div style="font-size: 11px; font-weight: 600; color: var(--blue-600); margin-bottom: 4px;">search_text()</div>
+            <div style="font-size: 11px; color: var(--grey-700); line-height: 1.3;">"742 Evergreen comparable sales", "sale price adjustments"</div>
+            <div style="font-size: 10px; color: var(--grey-500); margin-top: 4px;">Text Index &rarr; RRF &rarr; 12 chunks</div>
+          </div>
+          <div style="flex: 1; background: var(--purple-50); border: 1px solid var(--purple-600); border-radius: 8px; padding: 8px 10px;">
+            <div style="font-size: 11px; font-weight: 600; color: var(--purple-600); margin-bottom: 4px;">search_page_img()</div>
+            <div style="font-size: 11px; color: var(--grey-700); line-height: 1.3;">"comparable sales adjustment grid", "742 Evergreen appraisal table"</div>
+            <div style="font-size: 10px; color: var(--grey-500); margin-top: 4px;">Multimodal Index &rarr; 6 page images</div>
+          </div>
+        </div>
+
+        <div class="evaluate-tag refine" style="margin-top: 6px;">Found comps + grid, but missing GLA adjustment breakdown</div>
+      </div>
+    </div>
+
+    <div class="tree-connector"></div>
+
+    <!-- Round 2: Single tool refinement -->
+    <div class="query-round">
+      <div class="round-label">Round 2</div>
+      <div class="round-content">
+        <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+          <span class="fc-badge blue" style="flex-shrink:0;">FC</span>
+          <span style="font-size: 12px; color: var(--grey-700); font-weight: 500;">Single refinement call</span>
+        </div>
+        <div style="display: flex; gap: 8px; width: 100%;">
+          <div style="flex: 1; background: var(--blue-50); border: 1px solid var(--blue-600); border-radius: 8px; padding: 8px 10px;">
+            <div style="font-size: 11px; font-weight: 600; color: var(--blue-600); margin-bottom: 4px;">search_text()</div>
+            <div style="font-size: 11px; color: var(--grey-700); line-height: 1.3;">"gross living area adjustment", "GLA square footage comparison"</div>
+            <div style="font-size: 10px; color: var(--grey-500); margin-top: 4px;">Text Index &rarr; cross-round dedup (seen_ids) &rarr; 8 new chunks</div>
+          </div>
+        </div>
+        <div class="evaluate-tag sufficient" style="margin-top: 6px;">All relevant adjustment values extracted</div>
+      </div>
+    </div>
+
+    <div class="tree-connector"></div>
+
+    <!-- Synthesize -->
+    <div class="analysis-node">
+      <div class="analysis-header">
+        <div class="node-icon purple" style="width: 22px; height: 22px;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+        </div>
+        Synthesize &amp; Cite
+      </div>
+      <div class="analysis-body">Cross-reference text chunks with visual grid data. Attach inline citations to every factual claim.</div>
+    </div>
+
+    <div class="tree-connector"></div>
+
+    <!-- Answer -->
+    <div class="node green" style="flex-direction: column; align-items: flex-start; gap: 4px; padding: 12px 18px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <div class="node-icon green">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+        </div>
+        <span style="font-weight: 500;">Cited Answer</span>
+        <span class="node-sub">SSE streamed</span>
+      </div>
+      <div class="answer-preview">Comp #1 (120 Oak St) sold for $410,000 with a +$8,500 GLA adjustment... <span style="color: var(--blue-600);">[appraisal_742.pdf, p.12]</span></div>
+    </div>
+
   </div>
 </div>
 
