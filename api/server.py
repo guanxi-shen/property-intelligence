@@ -26,6 +26,9 @@ UPLOAD_MAX_SIZE_MB = 50
 UPLOAD_DAILY_LIMIT = 30
 _upload_counts: dict[str, int] = defaultdict(int)
 
+# Files currently being processed by /upload (prevents Eventarc duplicate processing)
+_processing_files: set[str] = set()
+
 
 def _get_storage():
     global _storage_client
@@ -244,6 +247,10 @@ async def upload_and_process(files: List[UploadFile] = File(...)):
         client = _get_storage()
         bucket = client.bucket(BUCKET_NAME)
 
+        # Mark files as being processed (prevents Eventarc duplicate processing)
+        for name, _ in file_data:
+            _processing_files.add(name)
+
         # Upload to GCS (shared prerequisite)
         emit("upload", "active", f"Uploading {n} PDF(s) to Cloud Storage")
         for i, (name, raw) in enumerate(file_data):
@@ -332,6 +339,11 @@ async def upload_and_process(files: List[UploadFile] = File(...)):
                 pass
 
         _upload_counts[date.today().isoformat()] += n
+
+        # Release processing lock
+        for name, _ in file_data:
+            _processing_files.discard(name)
+
         emit("finalize", "done", f"{n} document(s) ready to query")
 
     async def event_generator():
@@ -390,6 +402,12 @@ async def pipeline_trigger(request: Request):
 
     if not name.startswith("uploads/") or not name.lower().endswith(".pdf"):
         return {"status": "skipped", "reason": f"Not a PDF in uploads/: {name}"}
+
+    # Skip if /upload endpoint is already processing this file
+    pdf_name = name.removeprefix("uploads/")
+    if pdf_name in _processing_files:
+        logger.info(f"Skipping trigger for {pdf_name}: already being processed by /upload")
+        return {"status": "skipped", "reason": f"Already being processed by /upload: {pdf_name}"}
 
     # Check blob exists before processing (avoids 404s from stale GCS notifications)
     client = _get_storage()
