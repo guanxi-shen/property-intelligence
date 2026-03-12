@@ -25,29 +25,11 @@ A large real estate customer needs a property valuation chatbot, but their propr
 
 ## How This Solves It
 
-**1. Structure-aware parsing instead of blind text extraction**
-
-Document AI Layout Parser (powered by Gemini 3.0 Flash) understands document structure -- headings, tables, lists, paragraphs -- and produces semantic chunks that preserve context. A row in an adjustment grid stays with its column headers. A property address stays associated with its valuation figures. This is fundamentally different from naive page-level or sliding-window chunking that breaks mid-table.
-
-**2. Dual-modality retrieval -- text and visual**
-
-Many answers in property documents live in visual elements: adjustment grids, floor plans, neighborhood maps, property photos, site sketches. Text extraction alone cannot capture these. The system embeds both extracted text chunks and rendered page images into the same 768-dimensional semantic space using Gemini Embedding 2, then indexes them in two separate Vertex AI Vector Search indexes. The agent decides at query time whether to search text, images, or both.
-
-**3. Hybrid search for exact and semantic matching**
-
-Property queries often involve exact values -- "$425,000", "123 Main St", "MLS #2024-1234". Pure dense vector search struggles with exact keyword matches. The text index combines dense embeddings with TF-IDF sparse vectors, fused via Reciprocal Rank Fusion (RRF). This means semantic queries ("properties with deferred maintenance") and exact keyword queries ("$425,000 adjusted sale price") both work reliably.
-
-**4. Agentic reasoning with self-retry and discovery**
-
-Rather than dumping all retrieved context into a single prompt, a Gemini 3.1 Pro agent with function calling autonomously plans its search strategy. It formulates diverse queries (mixing semantic and keyword phrasings), evaluates the results, and if they're insufficient, refines its queries and searches again -- up to 3 rounds per tool. Cross-round deduplication ensures repeated searches surface new information rather than redundant results. The agent can call `search_text` for factual lookups, `search_page_img` for visual analysis, or both in sequence, deciding on the fly based on what it finds. Every claim in the response is inline-cited to a specific PDF page.
-
-**5. Multimodal document analysis**
-
-When the agent retrieves page images via `search_page_img`, Gemini doesn't just return metadata -- it visually analyzes the actual page renders. Adjustment grids, floor plans, property photos, and scanned forms are passed as image content directly into the model's context via `FunctionResponseFileData`. This means the agent can read values from a comparable sales grid, describe what it sees in a property photo, or trace lines on a plat map -- answering questions that pure text retrieval would miss entirely.
-
-**6. Self-service document ingestion**
-
-The system includes a browser-based upload flow where users drop PDFs and watch the full ingestion pipeline execute in real time -- parse, render, embed (text and images in parallel), index. New documents are immediately searchable. Re-uploading the same document overwrites its previous entries. This turns a batch ETL process into something a non-technical user can operate.
+| Issue | Why It Matters | Prototype Response |
+|-------|---------------|-------------------|
+| **Siloed knowledge** | Users can't search across documents holistically | Centralized ingestion into shared Vertex AI Vector Search indexes |
+| **Unstructured PDFs** | Mixed content, scans, and visuals break standard extraction and chunking | Document AI Layout Parser for structure-aware parsing; dual-index multimodal retrieval over page images via Gemini Embedding 2 |
+| **RAG answer quality** | Answers must be accurate across complex, heterogeneous documents | Gemini agent iteratively queries both text and image indexes, reasons over multimodal evidence, returns citation-backed answers |
 
 ## Architecture
 
