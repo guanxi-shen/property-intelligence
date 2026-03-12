@@ -51,114 +51,17 @@ The system includes a browser-based upload flow where users drop PDFs and watch 
 
 ## Architecture
 
-```
-                    User Browser
-                         |
-                         | SSE streaming
-                         v
-+----------------------------------------------------------------+
-|  Cloud Run (FastAPI)                                           |
-|                                                                |
-|  POST /chat/stream                                             |
-|       |                                                        |
-|       v                                                        |
-|  Gemini 3.1 Pro Agent (function calling, multi-round)          |
-|       |                    |                                   |
-|       | search_text        | search_page_img                     |
-|       v                    v                                   |
-|  +-----------+   +----------------+                            |
-|  | Text      |   | Multimodal     |                            |
-|  | Index     |   | Index          |    Vertex AI Vector Search |
-|  | dense +   |   | dense          |                            |
-|  | sparse    |   |                |                            |
-|  +-----------+   +----------------+                            |
-|       ^                    ^                                   |
-|       |                    |                                   |
-|  POST /upload              |                                   |
-|       |                    |                                   |
-|       v                    |                                   |
-|  Cloud Storage (uploads/)  |                                   |
-|       |                    |                                   |
-|       +----------+---------+                                   |
-|       |  (parallel branches)                                   |
-|       |                    |                                   |
-|  TEXT PIPELINE        IMAGE PIPELINE                           |
-|       |                    |                                   |
-|  Document AI          PyMuPDF                                  |
-|  Layout Parser        page render                              |
-|       |                    |                                   |
-|   +---+---+           Gemini Emb 2                             |
-|   |       |           (dense 768d)                             |
-| Gemini  TF-IDF             |                                   |
-| Emb 2   (sparse)           |                                   |
-|   |       |                |                                   |
-|   +---+---+                |                                   |
-|       |                    |                                   |
-|       v                    v                                   |
-|  Update text index    Update multimodal index                  |
-|       |                    |                                   |
-|       +----------+---------+                                   |
-|                  |                                             |
-|             Finalize                                           |
-+----------------------------------------------------------------+
-```
+### System Architecture
+
+![System Architecture](docs/system-architecture.png)
 
 ### Query Flow
 
-```
-  User Question
-       |
-       v
-  Gemini 3.1 Pro (thinking + function calling)
-       |
-       +--- Round 1: search_text(["property value 123 Main St", "$425,000"])
-       |       |
-       |       v
-       |    Text Index ---> dense + sparse (RRF) ---> ranked chunks
-       |       |
-       |       v
-       |    Agent evaluates results ---> insufficient, refines query
-       |
-       +--- Round 2: search_page_img(["adjustment grid", "comparable sales table"])
-       |       |
-       |       v
-       |    Multimodal Index ---> image similarity ---> page PNGs
-       |       |
-       |       v
-       |    Gemini visually analyzes page images
-       |    (reads tables, describes photos, traces plat maps)
-       |       |
-       |       v
-       |    Agent evaluates results ---> sufficient
-       |
-       v
-  Cited Answer (SSE streamed with inline [source.pdf, p.N] citations)
-```
+![Query Flow](docs/query-flow.png)
 
 ### Ingestion Pipeline
 
-Two fully independent pipelines run in parallel after upload:
-
-```
-1. Upload to GCS
-         |
-         +------- TEXT PIPELINE -------+------- IMAGE PIPELINE ------+
-         |                             |                              |
-    2. Document AI Layout Parser       2. Render pages to PNG         |
-         |                             |                              |
-      +--+--+                          3. Image embeddings (768d)     |
-      |     |                          |                              |
-  3a. Dense  3b. TF-IDF               4. Update multimodal index     |
-  embeddings  sparse vectors           |                              |
-      |     |                          +------------------------------+
-      +--+--+                          |
-         |                             |
-    4. Update text index               |
-         |                             |
-         +-----------------------------+
-         |
-    Ready to query
-```
+![Ingestion Pipeline](docs/ingestion-pipeline.png)
 
 | Stage | Service | What it does |
 |-------|---------|-------------|

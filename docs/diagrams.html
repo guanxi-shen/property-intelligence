@@ -1,0 +1,1617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Property Intelligence - Architecture Diagrams</title>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Google+Sans+Text:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --blue-600: #1a73e8;
+  --blue-50: #e8f0fe;
+  --green-600: #34a853;
+  --green-50: #e6f4ea;
+  --purple-600: #886FBF;
+  --purple-50: #f3e8fd;
+  --orange-600: #ea8600;
+  --orange-50: #fef7e0;
+  --red-600: #d93025;
+  --grey-50: #f8f9fa;
+  --grey-100: #f1f3f4;
+  --grey-200: #e8eaed;
+  --grey-300: #dadce0;
+  --grey-500: #9aa0a6;
+  --grey-700: #5f6368;
+  --grey-800: #3c4043;
+  --grey-900: #202124;
+  --surface: #ffffff;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Google Sans Text', 'Google Sans', -apple-system, sans-serif;
+  background: #f0f4f9;
+  padding: 40px;
+  color: var(--grey-900);
+}
+
+h1 {
+  font-family: 'Google Sans', sans-serif;
+  font-size: 24px;
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: var(--grey-900);
+}
+.subtitle {
+  font-size: 13px;
+  color: var(--grey-500);
+  margin-bottom: 32px;
+}
+
+.diagram-section {
+  margin-bottom: 48px;
+}
+.diagram-title {
+  font-family: 'Google Sans', sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 16px;
+  color: var(--grey-800);
+}
+
+/* Shared node styles */
+.node {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  background: var(--surface);
+  border: 1.5px solid var(--grey-200);
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--grey-800);
+  white-space: nowrap;
+}
+.node.blue { border-color: var(--blue-600); background: var(--blue-50); }
+.node.green { border-color: var(--green-600); background: var(--green-50); }
+.node.purple { border-color: var(--purple-600); background: var(--purple-50); }
+.node.orange { border-color: var(--orange-600); background: var(--orange-50); }
+
+.node-icon {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: white;
+}
+.node-icon.blue { background: var(--blue-600); }
+.node-icon.green { background: var(--green-600); }
+.node-icon.purple { background: var(--purple-600); }
+.node-icon.orange { background: var(--orange-600); }
+.node-icon.grey { background: var(--grey-500); }
+
+.node-sub {
+  font-size: 11px;
+  color: var(--grey-500);
+  font-weight: 400;
+  margin-left: 2px;
+}
+
+/* Vertical connector */
+.vline {
+  width: 2px;
+  background: var(--grey-300);
+  margin: 0 auto;
+}
+.vline.blue { background: var(--blue-600); }
+.vline.green { background: var(--green-600); }
+
+/* Horizontal connector */
+.hline {
+  height: 2px;
+  background: var(--grey-300);
+}
+
+/* Flow container */
+.flow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Arrow label on connector */
+.connector-label {
+  font-size: 11px;
+  color: var(--grey-500);
+  font-weight: 400;
+  text-align: center;
+  padding: 2px 0;
+}
+
+/* ============================================ */
+/* DIAGRAM 1: System Architecture               */
+/* ============================================ */
+.arch-container {
+  background: var(--surface);
+  border: 1.5px solid var(--grey-200);
+  border-radius: 16px;
+  padding: 28px 32px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+.arch-cloudrun {
+  border: 2px solid var(--blue-600);
+  border-radius: 14px;
+  padding: 20px 24px;
+  background: rgba(26, 115, 232, 0.02);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  position: relative;
+}
+.arch-cloudrun-label {
+  position: absolute;
+  top: -10px;
+  left: 20px;
+  background: var(--surface);
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--blue-600);
+  letter-spacing: 0.3px;
+}
+
+.arch-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  justify-content: center;
+}
+
+.arch-arrow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--grey-500);
+  font-size: 11px;
+  font-weight: 400;
+}
+.arch-arrow .arrow-line {
+  width: 32px;
+  height: 2px;
+  background: var(--grey-300);
+  position: relative;
+}
+.arch-arrow .arrow-line::after {
+  content: '';
+  position: absolute;
+  right: -1px;
+  top: -4px;
+  border: 5px solid transparent;
+  border-left-color: var(--grey-300);
+}
+.arch-arrow-down {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--grey-500);
+  font-size: 11px;
+}
+.arch-arrow-down .arrow-vline {
+  width: 2px;
+  height: 20px;
+  background: var(--grey-300);
+  position: relative;
+}
+.arch-arrow-down .arrow-vline::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: -4px;
+  border: 5px solid transparent;
+  border-top-color: var(--grey-300);
+}
+
+/* Index pair */
+.index-pair {
+  display: flex;
+  gap: 12px;
+}
+
+/* ============================================ */
+/* DIAGRAM 2: Query Flow                        */
+/* ============================================ */
+.query-container {
+  background: var(--surface);
+  border: 1.5px solid var(--grey-200);
+  border-radius: 16px;
+  padding: 28px 32px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 620px;
+}
+
+.query-round {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 14px 18px;
+  background: var(--grey-50);
+  border: 1.5px solid var(--grey-200);
+  border-radius: 10px;
+  margin: 0;
+  width: 100%;
+}
+.query-round.active { border-color: var(--blue-600); background: var(--blue-50); }
+
+.round-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--grey-500);
+  min-width: 56px;
+  padding-top: 2px;
+}
+.query-round.active .round-label { color: var(--blue-600); }
+
+.round-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.round-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--grey-700);
+  line-height: 1.4;
+}
+.round-step .step-icon {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--grey-300);
+  flex-shrink: 0;
+}
+.query-round.active .step-icon { background: var(--blue-600); }
+
+.evaluate-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-weight: 500;
+  margin-top: 2px;
+}
+.evaluate-tag.refine {
+  background: var(--orange-50);
+  color: var(--orange-600);
+  border: 1px solid var(--orange-600);
+}
+.evaluate-tag.sufficient {
+  background: var(--green-50);
+  color: var(--green-600);
+  border: 1px solid var(--green-600);
+}
+
+/* Query flow extras */
+.query-text {
+  font-size: 13px;
+  font-style: italic;
+  color: var(--grey-700);
+  padding-left: 34px;
+}
+.agent-thought {
+  font-size: 12px;
+  color: var(--grey-600, #5f6368);
+  font-style: italic;
+  padding-left: 34px;
+  line-height: 1.4;
+}
+.round-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--grey-300);
+  flex-shrink: 0;
+  margin-top: 6px;
+}
+.round-dot.blue { background: var(--blue-600); }
+
+.analysis-node {
+  padding: 10px 16px;
+  background: var(--purple-50);
+  border: 1.5px solid var(--purple-600);
+  border-radius: 10px;
+  width: 100%;
+}
+.analysis-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--grey-800);
+  margin-bottom: 4px;
+}
+.analysis-body {
+  font-size: 12px;
+  color: var(--grey-600, #5f6368);
+  padding-left: 30px;
+  line-height: 1.4;
+}
+
+.answer-preview {
+  font-size: 12px;
+  color: var(--grey-700);
+  padding-left: 34px;
+  line-height: 1.4;
+}
+
+/* ============================================ */
+/* DIAGRAM 3: Ingestion Pipeline (numbered)     */
+/* ============================================ */
+.ingest-container {
+  background: var(--surface);
+  border: 1.5px solid var(--grey-200);
+  border-radius: 16px;
+  padding: 28px 32px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.tree-root {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.tree-node {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  background: var(--surface);
+  border: 1.5px solid var(--grey-200);
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--grey-800);
+}
+.tree-node.blue { border-color: var(--blue-600); }
+.tree-node.green { border-color: var(--green-600); }
+
+.tree-node .tn-icon {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: white;
+  background: var(--blue-600);
+}
+.tree-node.green .tn-icon { background: var(--green-600); }
+
+.tree-connector {
+  width: 2px;
+  height: 16px;
+  background: var(--grey-300);
+}
+
+/* Fork/merge bars */
+.tree-fork {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+.tree-fork-bar {
+  width: 50%;
+  height: 2px;
+  background: var(--grey-300);
+}
+.tree-fork-lines {
+  display: flex;
+  width: 50%;
+  height: 16px;
+}
+.tree-fork-lines .left-line,
+.tree-fork-lines .right-line {
+  flex: 1;
+  position: relative;
+}
+.tree-fork-lines .left-line::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 2px;
+  height: 100%;
+  background: var(--grey-300);
+}
+.tree-fork-lines .right-line::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2px;
+  height: 100%;
+  background: var(--grey-300);
+}
+
+/* Branches row */
+.tree-branches {
+  display: flex;
+  gap: 14px;
+  width: 100%;
+}
+
+.tree-branch {
+  flex: 1;
+  background: var(--grey-50);
+  border: 1.5px solid var(--grey-200);
+  border-radius: 10px;
+  padding: 12px 14px 8px;
+}
+
+.branch-header {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--grey-500);
+  margin-bottom: 10px;
+  padding-left: 2px;
+}
+
+/* Steps inside branches */
+.step {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 6px 0;
+  position: relative;
+}
+.step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 11px;
+  top: 30px;
+  bottom: -2px;
+  width: 2px;
+  background: var(--grey-200);
+}
+
+.step-icon {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 600;
+  background: var(--blue-600);
+  color: white;
+  position: relative;
+  z-index: 1;
+}
+.step-icon.grey { background: var(--grey-500); }
+.step-icon.green { background: var(--green-600); }
+.step-icon.purple { background: var(--purple-600); }
+.step-icon.orange { background: var(--orange-600); }
+
+.step-body { flex: 1; min-width: 0; }
+.step-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--grey-800);
+  line-height: 22px;
+}
+.step-detail {
+  font-size: 11px;
+  color: var(--grey-500);
+  margin-top: 1px;
+}
+
+/* Merge lines (mirror of fork) */
+.tree-merge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+.tree-merge-lines {
+  display: flex;
+  width: 50%;
+  height: 16px;
+}
+.tree-merge-lines .left-line,
+.tree-merge-lines .right-line {
+  flex: 1;
+  position: relative;
+}
+.tree-merge-lines .left-line::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 2px;
+  height: 100%;
+  background: var(--grey-300);
+}
+.tree-merge-lines .right-line::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2px;
+  height: 100%;
+  background: var(--grey-300);
+}
+.tree-merge-bar {
+  width: 50%;
+  height: 2px;
+  background: var(--grey-300);
+}
+
+/* ============================================ */
+/* Utility                                      */
+/* ============================================ */
+.gap-4 { height: 4px; }
+.gap-8 { height: 8px; }
+.gap-12 { height: 12px; }
+.gap-16 { height: 16px; }
+.gap-20 { height: 20px; }
+
+.center { display: flex; justify-content: center; }
+
+.service-tag {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-left: 6px;
+}
+.service-tag.gcp { background: #e8f0fe; color: #1a73e8; }
+.service-tag.gemini { background: #f3e8fd; color: #886FBF; }
+
+/* ============================================ */
+/* Architecture: Full layout                    */
+/* ============================================ */
+.arch-full {
+  background: var(--surface);
+  border: 1.5px solid var(--grey-200);
+  border-radius: 16px;
+  padding: 28px 32px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+/* Vertical connector with optional label */
+.arch-vconn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.arch-vconn-line {
+  width: 2px;
+  height: 20px;
+  background: var(--grey-300);
+}
+.arch-vconn-label {
+  font-size: 11px;
+  color: var(--grey-500);
+  padding: 3px 0;
+}
+
+/* Two-column layout */
+.arch-two-col {
+  display: flex;
+  gap: 0;
+  width: 100%;
+}
+.arch-path-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 16px;
+}
+.arch-path-header {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 12px;
+  padding: 3px 12px;
+  border-radius: 10px;
+}
+.arch-path-header.blue { background: var(--blue-50); color: var(--blue-600); }
+.arch-path-header.orange { background: var(--orange-50); color: var(--orange-600); }
+
+.arch-divider {
+  width: 1.5px;
+  background: var(--grey-200);
+  margin: 8px 0;
+  flex-shrink: 0;
+}
+
+/* Function Call group */
+.fc-group {
+  width: 100%;
+  background: var(--grey-50);
+  border: 1.5px solid var(--grey-200);
+  border-radius: 10px;
+  padding: 10px 12px 8px;
+}
+.fc-group-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--grey-500);
+  margin-bottom: 10px;
+  padding-left: 2px;
+}
+.fc-group-footer {
+  font-size: 10px;
+  color: var(--grey-500);
+  text-align: right;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--grey-200);
+}
+
+/* FC row: badge + name --> arrow --> target index */
+.fc-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 8px;
+}
+.fc-node {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--grey-800);
+  white-space: nowrap;
+  padding: 5px 10px;
+  background: var(--surface);
+  border: 1.5px solid var(--grey-200);
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+.fc-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: white;
+  letter-spacing: 0.3px;
+}
+.fc-badge.blue { background: var(--blue-600); }
+.fc-badge.purple { background: var(--purple-600); }
+
+.fc-arrow {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 0 2px;
+}
+.fc-arrow-line {
+  width: 20px;
+  height: 2px;
+  background: var(--grey-300);
+  position: relative;
+}
+.fc-arrow-line::after {
+  content: '';
+  position: absolute;
+  right: -1px;
+  top: -4px;
+  border: 5px solid transparent;
+  border-left-color: var(--grey-300);
+}
+
+.fc-target {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--grey-800);
+  padding: 5px 10px;
+  background: var(--green-50);
+  border: 1.5px solid var(--green-600);
+  border-radius: 8px;
+  white-space: nowrap;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+}
+.fc-target.green { border-color: var(--green-600); }
+.fc-target-sub {
+  font-size: 9px;
+  color: var(--grey-500);
+  font-weight: 400;
+}
+
+/* Ingestion mini-branches */
+.ingest-branches {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+.ingest-mini-branch {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  background: var(--grey-50);
+  border: 1.5px solid var(--grey-200);
+  border-radius: 8px;
+  padding: 10px 8px 6px;
+}
+.ingest-mini-header {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--grey-500);
+  margin-bottom: 6px;
+}
+.ingest-mini-step {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--grey-800);
+  white-space: nowrap;
+  padding: 3px 6px;
+  background: var(--surface);
+  border-radius: 6px;
+  border: 1px solid var(--grey-200);
+}
+.ingest-mini-step.target { border-color: #a8dab5; background: var(--green-50); }
+.ingest-mini-arrow {
+  width: 2px;
+  height: 8px;
+  background: var(--grey-300);
+}
+
+/* ============================================ */
+/* Architecture: FC-to-Index mapping             */
+/* ============================================ */
+.fc-map {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.fc-map-headers {
+  display: flex;
+  align-items: center;
+}
+.fc-map-header {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--grey-500);
+  flex: 1;
+  text-align: center;
+}
+.fc-map-header.green { color: var(--green-600); }
+.fc-map-header-spacer { width: 48px; flex-shrink: 0; }
+
+.fc-map-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+.fc-map-arrow {
+  flex-shrink: 0;
+  display: block;
+}
+
+.fc-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--grey-800);
+  padding: 8px 12px;
+  background: var(--grey-50);
+  border: 1.5px solid var(--grey-200);
+  border-radius: 8px;
+  white-space: nowrap;
+  flex: 1;
+  justify-content: center;
+}
+
+.index-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--grey-800);
+  padding: 8px 12px;
+  background: var(--green-50);
+  border: 1.5px solid var(--green-600);
+  border-radius: 8px;
+  white-space: nowrap;
+  flex: 1;
+  justify-content: center;
+}
+.index-item-sub {
+  font-size: 9px;
+  color: var(--grey-500);
+  font-weight: 400;
+  margin-left: 2px;
+}
+
+/* Architecture: Ingestion section */
+.arch-ingest-section {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+.gap-6 { height: 6px; }
+
+/* Retrieval container box */
+.retrieval-box {
+  border: 1.5px solid var(--green-600);
+  border-radius: 12px;
+  padding: 18px 16px 12px;
+  background: rgba(52, 168, 83, 0.02);
+  position: relative;
+  width: 100%;
+}
+.retrieval-label {
+  position: absolute;
+  top: -10px;
+  left: 18px;
+  background: var(--surface);
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--green-600);
+  letter-spacing: 0.3px;
+}
+
+/* Ingestion Pipeline standalone (outside Cloud Run) */
+.arch-ingest-standalone {
+  border: 1.5px solid var(--orange-600);
+  border-radius: 12px;
+  padding: 18px 16px 14px;
+  background: rgba(234, 134, 0, 0.02);
+  position: relative;
+  width: 100%;
+}
+.arch-ingest-standalone-label {
+  position: absolute;
+  top: -10px;
+  left: 18px;
+  background: var(--surface);
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--orange-600);
+  letter-spacing: 0.3px;
+}
+
+/* Eventarc flow tag */
+.eventarc-tag {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--orange-600);
+  padding: 3px 10px;
+  background: var(--orange-50);
+  border: 1px solid var(--orange-600);
+  border-radius: 10px;
+  margin-right: 12px;
+  white-space: nowrap;
+}
+
+/* Architecture: Eventarc flow */
+.eventarc-flow {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: var(--surface);
+  border: 1.5px solid var(--grey-200);
+  border-radius: 12px;
+  padding: 14px 20px;
+}
+.eventarc-node {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+.eventarc-node.orange { background: var(--orange-50); border: 1.5px solid var(--orange-600); }
+.eventarc-node.blue { background: var(--blue-50); border: 1.5px solid var(--blue-600); }
+.eventarc-icon {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.eventarc-icon.orange { background: var(--orange-600); }
+.eventarc-icon.blue { background: var(--blue-600); }
+.eventarc-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--grey-800);
+}
+.eventarc-detail {
+  font-size: 10px;
+  color: var(--grey-500);
+}
+.eventarc-connector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 0 6px;
+  flex-shrink: 0;
+}
+.eventarc-label {
+  font-size: 9px;
+  color: var(--grey-500);
+  white-space: nowrap;
+  font-family: 'Google Sans Text', monospace;
+}
+
+/* Path section labels */
+.path-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  padding: 4px 14px;
+  border-radius: 10px;
+  align-self: flex-start;
+  margin-bottom: 4px;
+}
+.path-label.blue { background: var(--blue-50); color: var(--blue-600); }
+.path-label.orange { background: var(--orange-50); color: var(--orange-600); }
+
+.path-divider {
+  width: 100%;
+  height: 1.5px;
+  background: var(--grey-200);
+  margin: 20px 0 12px;
+}
+
+/* CE branch description */
+.branch-desc {
+  font-size: 12px;
+  color: var(--grey-700);
+  padding: 6px 2px;
+  line-height: 1.4;
+}
+.branch-tech {
+  font-size: 10px;
+  color: var(--grey-500);
+  padding: 2px 2px 0;
+}
+
+/* Side index box */
+.index-side-box {
+  border: 1.5px solid var(--green-600);
+  border-radius: 12px;
+  padding: 18px 14px 12px;
+  background: rgba(52, 168, 83, 0.02);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 170px;
+}
+.index-side-label {
+  position: absolute;
+  top: -10px;
+  left: 14px;
+  background: var(--surface);
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--green-600);
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+.index-side-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--grey-800);
+  padding: 8px 12px;
+  background: var(--green-50);
+  border: 1.5px solid var(--green-600);
+  border-radius: 8px;
+  white-space: nowrap;
+}
+.index-side-item-sub {
+  font-size: 9px;
+  color: var(--grey-500);
+  font-weight: 400;
+}
+
+/* Center arrows column between Cloud Run and Index */
+.arrows-col {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 0 10px;
+  gap: 32px;
+}
+.arrow-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.arrow-group-label {
+  font-size: 9px;
+  color: var(--grey-500);
+  white-space: nowrap;
+}
+
+/* FC container box (agent-side tools, separate from agent) */
+.fc-side-box {
+  border: 1.5px solid var(--purple-600);
+  border-radius: 12px;
+  padding: 18px 14px 12px;
+  background: rgba(136, 111, 191, 0.02);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 170px;
+}
+.fc-side-label {
+  position: absolute;
+  top: -10px;
+  left: 14px;
+  background: var(--surface);
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--purple-600);
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+/* Ingestion pipeline container box (separate from Cloud Run) */
+.ingest-side-box {
+  border: 1.5px solid var(--orange-600);
+  border-radius: 12px;
+  padding: 20px 14px 12px;
+  background: rgba(234, 134, 0, 0.02);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 170px;
+}
+.ingest-side-label {
+  position: absolute;
+  top: -10px;
+  left: 14px;
+  background: var(--surface);
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--orange-600);
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+/* Bidirectional arrow connector */
+.bidir-conn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 4px 0;
+}
+.bidir-label {
+  font-size: 10px;
+  color: var(--grey-500);
+  white-space: nowrap;
+}
+</style>
+</head>
+<body>
+
+<h1>Property Intelligence - Architecture Diagrams</h1>
+<p class="subtitle">Open in browser, screenshot each diagram for README. White background, clean edges.</p>
+
+
+<!-- ============================================ -->
+<!-- DIAGRAM 1C: System Architecture (Y-Flow)      -->
+<!-- ============================================ -->
+<div class="diagram-section">
+  <div class="diagram-title">System Architecture — Variation (Y-Flow)</div>
+
+  <div class="arch-full" style="padding-bottom: 40px;">
+
+    <div style="display: flex; gap: 60px; width: 700px; align-items: flex-start; position: relative;">
+
+      <!-- Cross-flow SVG overlays -->
+      <svg width="700" height="300" style="position: absolute; top: 0; left: 0; pointer-events: none; z-index: 10;">
+        <defs>
+          <marker id="overlay-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+            <polygon points="0,0 8,4 0,8" fill="#dadce0" />
+          </marker>
+        </defs>
+        <!-- UI (Left) to Cloud Storage (Right) -->
+        <path d="M 260,20 C 320,20 320,160 375,160" fill="none" stroke="#dadce0" stroke-width="2" marker-end="url(#overlay-arrow)"/>
+        
+        <rect x="250" y="81" width="140" height="18" fill="#ffffff" />
+        <text x="320" y="93" font-family="Google Sans, sans-serif" font-size="10" font-weight="500" fill="#5f6368" text-anchor="middle">User uploaded documents</text>
+      </svg>
+
+      <!-- LEFT COLUMN: Query Path -->
+      <div style="width: 320px; display: flex; flex-direction: column; align-items: center; padding-top: 0;">
+        
+        <!-- UI (Frontend) -->
+        <div class="node" style="align-self: center;">
+          <div class="node-icon grey">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+          </div>
+          UI
+          <span class="node-sub">Chat &middot; Upload</span>
+        </div>
+
+        <div class="arch-vconn" style="padding: 10px 0;">
+          <div class="arch-vconn-line" style="height: 20px;"></div>
+          <span class="arch-vconn-label">SSE streaming</span>
+          <div class="arch-vconn-line" style="height: 20px;"></div>
+          <svg width="16" height="10" viewBox="0 0 16 10">
+            <polygon points="3,0 8,6 13,0" fill="#dadce0"/>
+          </svg>
+        </div>
+
+        <!-- Cloud Run (Old FastAPI) -->
+        <div class="node blue" style="align-self: center; width: 100%; justify-content: center;">
+          <div class="node-icon blue">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V8l8 5 8-5v10zm-8-7L4 6h16l-8 5z"/></svg>
+          </div>
+          Cloud Run
+        </div>
+
+        <div class="arch-vconn" style="padding: 10px 0;">
+          <div class="arch-vconn-line" style="height: 21px;"></div>
+          <span class="arch-vconn-label">prompt + history</span>
+          <div class="arch-vconn-line" style="height: 21px;"></div>
+          <svg width="16" height="10" viewBox="0 0 16 10">
+            <polygon points="3,0 8,6 13,0" fill="#dadce0"/>
+          </svg>
+        </div>
+
+        <!-- Agent Orchestration Container -->
+        <div class="fc-side-box" style="width: 100%; border-color: var(--purple-600); background: rgba(136, 111, 191, 0.04); padding: 16px 12px 14px; align-items: center; justify-content: flex-end; min-height: 180px;">
+          <div class="fc-side-label" style="color: var(--purple-600);">Agent Orchestration</div>
+
+          <div class="node purple" style="justify-content: center; padding: 10px; width: 100%;">
+            <div class="node-icon purple">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+            </div>
+            <div style="text-align: left;">
+              Gemini 3.1 Pro
+              <div class="node-sub" style="margin-left: 0;">Reasoning &middot; Planning</div>
+            </div>
+          </div>
+
+          <!-- Two-way vertical arrows (separated) -->
+          <div style="display: flex; justify-content: center; align-items: center; gap: 24px; padding: 8px 0; width: 100%;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 10px; color: var(--grey-500);">calls</span>
+              <svg width="12" height="24" viewBox="0 0 12 24">
+                <line x1="6" y1="0" x2="6" y2="18" stroke="#dadce0" stroke-width="2"/>
+                <polygon points="1,18 6,24 11,18" fill="#dadce0"/>
+              </svg>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <svg width="12" height="24" viewBox="0 0 12 24">
+                <polygon points="1,6 6,0 11,6" fill="#dadce0"/>
+                <line x1="6" y1="6" x2="6" y2="24" stroke="#dadce0" stroke-width="2"/>
+              </svg>
+              <span style="font-size: 10px; color: var(--grey-500);">results</span>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 8px; justify-content: center; width: 100%;">
+            <div class="fc-item" style="flex: 1; padding: 6px;">
+              <span class="fc-badge blue">FC</span> search_text
+            </div>
+            <div class="fc-item" style="flex: 1; padding: 6px;">
+              <span class="fc-badge purple">FC</span> search_multimodal
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- RIGHT COLUMN: Ingestion Path -->
+      <div style="width: 320px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 0;">
+        
+        <!-- Data Sources Node -->
+        <div class="node" style="width: 100%; justify-content: center; border: 1.5px dashed var(--grey-300); flex-direction: column; gap: 4px; padding: 10px 18px;">
+          <div style="display: flex; align-items: center; gap: 6px; font-weight: 600; color: var(--grey-700); font-size: 13px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--grey-600)"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/></svg>
+            Data Sources
+          </div>
+          <div style="font-size: 10px; color: var(--grey-500);">GDrive &middot; Box &middot; OneDrive &middot; SharePoint</div>
+        </div>
+
+        <div class="arch-vconn" style="padding: 10px 0;">
+          <div class="arch-vconn-line" style="height: 14px;"></div>
+          <span class="arch-vconn-label">Connectors &amp; Sync</span>
+          <div class="arch-vconn-line" style="height: 14px;"></div>
+          <svg width="16" height="10" viewBox="0 0 16 10">
+            <polygon points="3,0 8,6 13,0" fill="#dadce0"/>
+          </svg>
+        </div>
+
+        <!-- Cloud Storage Node -->
+        <div class="node orange" style="width: 100%; justify-content: center; background: var(--surface); border: 1.5px solid var(--orange-600); padding: 10px 18px;">
+          <div class="node-icon orange">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/></svg>
+          </div>
+          <div>
+            <div class="eventarc-name" style="font-weight: 500; color: var(--grey-800); font-size: 13px;">Cloud Storage</div>
+            <div class="eventarc-detail" style="font-size: 11px; color: var(--grey-500);">PDF uploads</div>
+          </div>
+        </div>
+
+        <div class="arch-vconn" style="padding: 10px 0;">
+          <div class="arch-vconn-line" style="height: 20px;"></div>
+          <span class="arch-vconn-label">Eventarc triggering</span>
+          <div class="arch-vconn-line" style="height: 20px;"></div>
+          <svg width="16" height="10" viewBox="0 0 16 10">
+            <polygon points="3,0 8,6 13,0" fill="#dadce0"/>
+          </svg>
+        </div>
+
+        <!-- Ingestion Pipeline Container -->
+        <div class="arch-ingest-standalone" style="width: 360px; padding: 18px 12px 14px; margin-left: -20px; display: flex; flex-direction: column; justify-content: flex-end; min-height: 180px;">
+          <div class="arch-ingest-standalone-label">Ingestion Pipeline</div>
+
+          <div class="ingest-branches" style="gap: 12px; display: flex; flex-direction: row; justify-content: center; height: 100%;">
+            <div class="ingest-mini-branch" style="flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; min-height: 145px;">
+              <div class="ingest-mini-header" style="text-align: center;">Text Pipeline</div>
+              <div class="ingest-mini-step" style="white-space: normal; line-height: 1.2; text-align: center;">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="#886FBF" style="flex-shrink:0;"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/></svg>
+                Document AI Layout Parser
+              </div>
+              <div class="ingest-mini-arrow"></div>
+              <div class="ingest-mini-step" style="white-space: normal; line-height: 1.2; text-align: center;">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="#886FBF" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/></svg>
+                Gemini Embedding 2 + TF-IDF
+              </div>
+              <div class="ingest-mini-arrow"></div>
+              <div class="ingest-mini-step target">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="#34a853" style="flex-shrink:0;"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+                Text Index
+              </div>
+            </div>
+            <div class="ingest-mini-branch" style="flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; min-height: 145px;">
+              <div class="ingest-mini-header" style="text-align: center;">Image Pipeline</div>
+              <div class="ingest-mini-step" style="white-space: normal; line-height: 1.2; text-align: center;">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="#5f6368" style="flex-shrink:0;"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+                PyMuPDF PDF to Image
+              </div>
+              <div class="ingest-mini-arrow"></div>
+              <div class="ingest-mini-step" style="white-space: normal; line-height: 1.2; text-align: center;">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="#886FBF" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/></svg>
+                Gemini Embedding 2
+              </div>
+              <div class="ingest-mini-arrow"></div>
+              <div class="ingest-mini-step target">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="#34a853" style="flex-shrink:0;"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+                Multimodal Index
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- VERTICAL ARROWS (Connecting top columns to bottom Database) -->
+    <div style="width: 700px; height: 60px; position: relative;">
+      <svg width="700" height="60" style="position: absolute; top: 0; left: 0;">
+        <defs>
+          <marker id="arrow-down" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+            <polygon points="0,0 8,4 0,8" fill="#dadce0" />
+          </marker>
+          <marker id="arrow-up" markerWidth="8" markerHeight="8" refX="1" refY="4" orient="auto">
+            <polygon points="8,0 0,4 8,8" fill="#dadce0" />
+          </marker>
+        </defs>
+
+        <!-- Left Column to Database -->
+        <line x1="140" y1="0" x2="140" y2="56" stroke="#dadce0" stroke-width="2" marker-end="url(#arrow-down)"/>
+        <line x1="160" y1="0" x2="160" y2="56" stroke="#dadce0" stroke-width="2" marker-start="url(#arrow-up)"/>
+        
+        <text x="132" y="30" font-family="Google Sans, sans-serif" font-size="11" fill="#5f6368" text-anchor="end">queries</text>
+        <text x="168" y="30" font-family="Google Sans, sans-serif" font-size="11" fill="#5f6368" text-anchor="start">results</text>
+
+        <!-- Right Column to Database -->
+        <line x1="540" y1="0" x2="540" y2="56" stroke="#dadce0" stroke-width="2" marker-end="url(#arrow-down)"/>
+        <text x="548" y="30" font-family="Google Sans, sans-serif" font-size="11" fill="#5f6368" text-anchor="start">index updates</text>
+      </svg>
+    </div>
+
+    <!-- BOTTOM: Vertex AI Vector Search (Shared Database) -->
+    <div class="retrieval-box" style="width: 720px; align-self: center; justify-content: space-evenly; display: flex; flex-direction: row; gap: 40px; padding: 16px 20px 12px; margin-top: -1px;">
+      <div class="retrieval-label" style="left: 50%; transform: translateX(-50%);">Vertex AI Vector Search</div>
+      
+      <div class="index-item" style="flex: 1; flex-direction: column; align-items: center; gap: 4px; padding: 12px; max-width: 300px;">
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#34a853"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+          <span style="font-size: 13px;">Text Index</span>
+        </div>
+        <div class="index-item-sub">hybrid: dense + sparse (RRF)</div>
+      </div>
+      
+      <div class="index-item" style="flex: 1; flex-direction: column; align-items: center; gap: 4px; padding: 12px; max-width: 300px;">
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#34a853"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+          <span style="font-size: 13px;">Multimodal Index</span>
+        </div>
+        <div class="index-item-sub">dense image similarity</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- DIAGRAM 2: Query Flow                        -->
+<!-- ============================================ -->
+<div class="diagram-section">
+  <div class="diagram-title">Query Flow</div>
+
+  <div class="query-container">
+
+    <!-- User question with actual text -->
+    <div class="query-question">
+      <div class="node" style="flex-direction: column; align-items: flex-start; gap: 4px; padding: 12px 18px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div class="node-icon grey">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+          </div>
+          <span style="font-weight: 500;">User Question</span>
+        </div>
+        <div class="query-text">"What are the comparable sales adjustments for 742 Evergreen Terrace?"</div>
+      </div>
+    </div>
+
+    <div class="tree-connector"></div>
+
+    <!-- Agent planning -->
+    <div class="node purple" style="flex-direction: column; align-items: flex-start; gap: 4px; padding: 12px 18px; width: 100%;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <div class="node-icon purple">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+        </div>
+        <span style="font-weight: 500;">Gemini 3.1 Pro</span>
+        <span class="node-sub">thinking</span>
+      </div>
+      <div class="agent-thought">Need comparable sales data for this address. Start with text search for specific values, then retrieve the adjustment grid visually.</div>
+    </div>
+
+    <div class="tree-connector"></div>
+
+    <!-- Round 1: Text search -->
+    <div class="query-round">
+      <div class="round-label">Round 1</div>
+      <div class="round-content">
+        <div class="round-step">
+          <span class="fc-badge blue" style="flex-shrink:0;">FC</span>
+          <span>search_text(["742 Evergreen Terrace comparable sales", "sale price adjustments"])</span>
+        </div>
+        <div class="round-step">
+          <div class="round-dot"></div>
+          <span>Text Index &rarr; hybrid dense + sparse (RRF) &rarr; 12 text chunks</span>
+        </div>
+        <div class="round-step">
+          <div class="round-dot"></div>
+          <span>Found: 3 comparable properties, sale prices, addresses. Missing: adjustment grid values.</span>
+        </div>
+        <div class="evaluate-tag refine">Need adjustment details &mdash; search page images</div>
+      </div>
+    </div>
+
+    <div class="tree-connector"></div>
+
+    <!-- Round 2: Page image search -->
+    <div class="query-round">
+      <div class="round-label">Round 2</div>
+      <div class="round-content">
+        <div class="round-step">
+          <span class="fc-badge blue" style="flex-shrink:0;">FC</span>
+          <span>search_multimodal(["comparable sales adjustment grid", "742 Evergreen appraisal table"])</span>
+        </div>
+        <div class="round-step">
+          <div class="round-dot"></div>
+          <span>Multimodal Index &rarr; image similarity &rarr; 6 page images</span>
+        </div>
+        <div class="round-step">
+          <div class="round-dot"></div>
+          <span>Gemini visually reads adjustment grid from rendered page images</span>
+        </div>
+        <div class="evaluate-tag sufficient">All adjustment values extracted</div>
+      </div>
+    </div>
+
+    <div class="tree-connector"></div>
+
+    <!-- Analysis step -->
+    <div class="analysis-node">
+      <div class="analysis-header">
+        <div class="node-icon purple" style="width: 22px; height: 22px;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+        </div>
+        Synthesize &amp; Cite
+      </div>
+      <div class="analysis-body">Cross-reference text chunks with visual grid data. Attach inline citations to every factual claim.</div>
+    </div>
+
+    <div class="tree-connector"></div>
+
+    <!-- Answer -->
+    <div class="node green" style="flex-direction: column; align-items: flex-start; gap: 4px; padding: 12px 18px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <div class="node-icon green">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+        </div>
+        <span style="font-weight: 500;">Cited Answer</span>
+        <span class="node-sub">SSE streamed</span>
+      </div>
+      <div class="answer-preview">Comp #1 (120 Oak St) sold for $410,000 with a +$8,500 GLA adjustment... <span style="color: var(--blue-600);">[appraisal_742.pdf, p.12]</span></div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- DIAGRAM 3: Ingestion Pipeline (numbered)     -->
+<!-- ============================================ -->
+<div class="diagram-section">
+  <div class="diagram-title">Ingestion Pipeline</div>
+
+  <div class="ingest-container">
+    <div class="tree-root">
+
+      <!-- Step 1: Upload -->
+      <div class="tree-node blue">
+        <div class="tn-icon">1</div>
+        Upload to Cloud Storage
+      </div>
+
+      <!-- Fork -->
+      <div class="tree-connector"></div>
+      <div class="tree-fork">
+        <div class="tree-fork-bar"></div>
+        <div class="tree-fork-lines">
+          <div class="left-line"></div>
+          <div class="right-line"></div>
+        </div>
+      </div>
+
+      <!-- Branches -->
+      <div class="tree-branches">
+        <!-- Text pipeline -->
+        <div class="tree-branch">
+          <div class="branch-header">Text Pipeline</div>
+          <div class="step">
+            <div class="step-icon purple">2</div>
+            <div class="step-body">
+              <div class="step-label">Document AI Layout Parser</div>
+              <div class="step-detail">Semantic chunks with structure</div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-icon purple">3a</div>
+            <div class="step-body">
+              <div class="step-label">Dense embeddings</div>
+              <div class="step-detail">Gemini Embedding 2 (768d)</div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-icon purple">3b</div>
+            <div class="step-body">
+              <div class="step-label">TF-IDF sparse vectors</div>
+              <div class="step-detail">Exact keyword matching</div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-icon purple">4</div>
+            <div class="step-body">
+              <div class="step-label">Update text index</div>
+              <div class="step-detail">Vertex AI Vector Search</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Image pipeline -->
+        <div class="tree-branch">
+          <div class="branch-header">Image Pipeline</div>
+          <div class="step">
+            <div class="step-icon purple">2</div>
+            <div class="step-body">
+              <div class="step-label">Render pages to PNG</div>
+              <div class="step-detail">PyMuPDF at 200 DPI</div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-icon purple">3</div>
+            <div class="step-body">
+              <div class="step-label">Image embeddings</div>
+              <div class="step-detail">Gemini Embedding 2 (768d)</div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-icon purple">4</div>
+            <div class="step-body">
+              <div class="step-label">Update multimodal index</div>
+              <div class="step-detail">Vertex AI Vector Search</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Merge -->
+      <div class="tree-merge">
+        <div class="tree-merge-lines">
+          <div class="left-line"></div>
+          <div class="right-line"></div>
+        </div>
+        <div class="tree-merge-bar"></div>
+      </div>
+      <div class="tree-connector"></div>
+
+      <!-- Done -->
+      <div class="tree-node green">
+        <div class="tn-icon" style="background: var(--green-600);">&#10003;</div>
+        Ready to query
+      </div>
+
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
