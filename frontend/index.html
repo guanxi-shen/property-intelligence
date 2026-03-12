@@ -620,6 +620,27 @@ header .spacer { flex: 1; }
 .page-chip:hover { background: var(--blue-50); color: var(--blue-600); border-color: var(--blue-100); }
 .page-chip.active { background: var(--blue-600); color: white; border-color: var(--blue-600); }
 
+/* Suggestion chips */
+#suggestions {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  max-width: 900px; width: 100%;
+  margin: 0 auto;
+  padding: 0 24px 8px;
+}
+.suggestion-chip {
+  background: var(--surface);
+  border: 1px solid var(--grey-300);
+  border-radius: 18px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-family: 'Google Sans Text', sans-serif;
+  color: var(--grey-700);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  line-height: 1.3;
+}
+.suggestion-chip:hover { background: var(--blue-50); color: var(--blue-600); border-color: var(--blue-100); }
+
 /* Input */
 #input-area {
   padding: 16px 24px 20px;
@@ -775,6 +796,11 @@ header .spacer { flex: 1; }
     <div id="chat-area">
       <div class="msg assistant"><div class="stream-answer">Hello! I can help you analyze property documents. Ask me about property valuations, comparable sales, market data, or any information from your uploaded documents.</div></div>
     </div>
+    <div id="suggestions">
+      <div class="suggestion-chip" onclick="useSuggestion(this)">What structural or foundation concerns were identified across all inspected properties, and show me the relevant photos?</div>
+      <div class="suggestion-chip" onclick="useSuggestion(this)">What is the total estimated repair cost across all inspection findings?</div>
+      <div class="suggestion-chip" onclick="useSuggestion(this)">Compare the comparable sales adjustment methodology between the URAR report and the Las Vegas condo appraisal</div>
+    </div>
     <div id="input-area">
       <input id="input" type="text" placeholder="Ask about property valuations..." autocomplete="off">
       <button id="send-btn" onclick="sendMessage()">Send</button>
@@ -911,9 +937,16 @@ function buildRetrievedPanel(docs) {
 
 function scrollChat() { chatArea.scrollTop = chatArea.scrollHeight; }
 
+function useSuggestion(el) {
+  input.value = el.textContent;
+  document.getElementById('suggestions').style.display = 'none';
+  sendMessage();
+}
+
 async function sendMessage() {
   const text = input.value.trim();
   if (!text) return;
+  document.getElementById('suggestions').style.display = 'none';
 
   input.value = '';
   sendBtn.disabled = true;
