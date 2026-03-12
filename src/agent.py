@@ -36,7 +36,7 @@ def _get_page_client():
     return _page_client
 
 
-def search_text(queries: list, neighbor_count: int = 10) -> dict:
+def search_text(queries: list, neighbor_count: int = 5) -> dict:
     """Search text chunks from property documents with deduplication across rounds.
 
     Args:
@@ -87,11 +87,11 @@ def search_text(queries: list, neighbor_count: int = 10) -> dict:
         "total_found": len(new_results),
         "cumulative_total": len(_text_accumulator["results"]),
         "round": current_round,
-        "message": f"Round {current_round}: Found {len(new_results)} new text chunks",
+        "message": f"Function call round {current_round}: Found {len(new_results)} new text chunks",
     }
 
 
-def search_page_img(queries: list, neighbor_count: int = 8, diversity_balance: float = 0.5) -> dict:
+def search_page_img(queries: list, neighbor_count: int = 4, diversity_balance: float = 0.5) -> dict:
     """Search PDF page images from property documents with deduplication across rounds.
 
     Args:
@@ -143,7 +143,7 @@ def search_page_img(queries: list, neighbor_count: int = 8, diversity_balance: f
         "total_found": len(new_results),
         "cumulative_total": len(_page_accumulator["results"]),
         "round": current_round,
-        "message": f"Round {current_round}: Found {len(new_results)} new page images",
+        "message": f"Function call round {current_round}: Found {len(new_results)} new page images",
     }
 
 
@@ -255,16 +255,12 @@ class PropertyAgent:
         """
         self._reset_accumulators()
 
-        contents = []
-        for role, text in self.conversation_history:
-            contents.append(types.Content(
-                role=role,
-                parts=[types.Part.from_text(text=text)],
-            ))
-        contents.append(types.Content(
+        # Each turn is independent -- replaying history as plain text breaks
+        # thought signatures required by the thinking model.
+        contents = [types.Content(
             role="user",
             parts=[types.Part.from_text(text=message)],
-        ))
+        )]
 
         result = self.llm.generate(prompt=message, contents=contents, stream_cb=stream_cb)
 

@@ -137,12 +137,23 @@ async def chat_stream(request: Request):
 
     async def run_agent():
         try:
-            logger.info(f"Chat started: session={session_id}, message={message[:100]}")
+            import time as _t
+            t0 = _t.time()
+            print(f"[chat] START session={session_id} msg={message[:80]}")
             result = await asyncio.to_thread(agent.chat, message, stream_cb)
-            logger.info(f"Agent returned: {len(result.get('citations', []))} citations, {len(result.get('retrieved_docs', []))} retrieved docs")
+            t1 = _t.time()
+            cites = result.get("citations", [])
+            docs = result.get("retrieved_docs", [])
+            print(f"[chat] Agent done in {t1-t0:.1f}s: answer={len(result.get('answer',''))}c, citations={len(cites)}, retrieved={len(docs)}")
+            for c in cites:
+                print(f"  [cite] {c.get('source_pdf')} p.{c.get('page_number')} type={c.get('type')}")
             result["citations"] = _enrich_citations(result.get("citations", []))
             result["retrieved_docs"] = _enrich_citations(result.get("retrieved_docs", []))
-            logger.info("Emitting done event")
+            t2 = _t.time()
+            enriched_cites = sum(1 for c in result["citations"] if c.get("pdf_url"))
+            enriched_docs = sum(1 for d in result["retrieved_docs"] if d.get("pdf_url"))
+            print(f"[chat] Enriched in {t2-t1:.1f}s: cites_with_url={enriched_cites}/{len(result['citations'])}, docs_with_url={enriched_docs}/{len(result['retrieved_docs'])}")
+            print(f"[chat] DONE total={t2-t0:.1f}s, emitting done event")
             await queue.put(("done", result))
         except Exception as e:
             logger.error(f"Agent error: {e}", exc_info=True)

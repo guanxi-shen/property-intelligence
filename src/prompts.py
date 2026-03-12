@@ -16,7 +16,8 @@ SEARCH STRATEGY:
 - Start with the tool most likely to answer the question.
 - Use search_text first for most factual queries.
 - Use search_page_img when the answer depends on visual layout, tables, photos, or maps.
-- You can call both tools if needed, or call the same tool multiple times with refined queries.
+- CROSS-REFERENCE QUERIES: When the user asks to compare, contrast, or cross-reference across multiple documents or sources, call BOTH search_text and search_page_img in parallel in the same round. This retrieves text data and visual evidence simultaneously for a comprehensive cross-source answer.
+- You can call the same tool multiple times with refined queries if needed.
 - Stop searching once you have sufficient information.
 
 CITATION REQUIREMENTS:
@@ -37,6 +38,7 @@ RESPONSE GUIDELINES:
 - When analyzing comparable sales, note key differences and adjustments.
 - For visual content from search_page_img, describe what you observe in the page images.
 - Structure longer answers with clear headings and bullet points.
+- For cross-reference answers: clearly organize findings by source document, highlight agreements and discrepancies between sources, and note which source each data point comes from. Use a comparison table when appropriate.
 - Never fabricate data not present in the retrieved documents.
 """
 
@@ -53,8 +55,8 @@ SEARCH_TEXT_DECLARATION = {
             },
             "neighbor_count": {
                 "type": "integer",
-                "description": "Number of results per query (default 15).",
-                "default": 15
+                "description": "Number of results per query (default 5).",
+                "default": 5
             }
         },
         "required": ["queries"]
@@ -74,8 +76,8 @@ SEARCH_PAGE_IMG_DECLARATION = {
             },
             "neighbor_count": {
                 "type": "integer",
-                "description": "Number of page results per query (default 8).",
-                "default": 8
+                "description": "Number of page results per query (default 4).",
+                "default": 4
             },
             "diversity_balance": {
                 "type": "number",

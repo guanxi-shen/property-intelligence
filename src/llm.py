@@ -241,6 +241,23 @@ class GeminiLLM:
                 for fc in function_calls:
                     stream_cb("tool_call", fc.name)
 
+            # Debug: verify thought signatures are present on FC parts
+            fc_parts = [p for p in accumulated_parts if hasattr(p, 'function_call') and p.function_call]
+            sig_parts = [p for p in accumulated_parts if getattr(p, 'thought_signature', None)]
+            has_sig = any(getattr(p, 'thought_signature', None) for p in fc_parts)
+            if not has_sig and fc_parts:
+                logger.warning(
+                    "FC round %d: NO thought_signature on FC parts! "
+                    "total_parts=%d, fc_parts=%d, sig_parts=%d, fc_names=%s",
+                    round_num + 1, len(accumulated_parts), len(fc_parts),
+                    len(sig_parts), [p.function_call.name for p in fc_parts],
+                )
+            else:
+                logger.info(
+                    "FC round %d: thought_sig OK (%d FCs, %d sig parts)",
+                    round_num + 1, len(fc_parts), len(sig_parts),
+                )
+
             contents.append(types.Content(role="model", parts=accumulated_parts))
             results = self._execute_tools(function_calls)
 

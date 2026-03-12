@@ -797,9 +797,10 @@ header .spacer { flex: 1; }
       <div class="msg assistant"><div class="stream-answer">Hello! I can help you analyze property documents. Ask me about property valuations, comparable sales, market data, or any information from your uploaded documents.</div></div>
     </div>
     <div id="suggestions">
-      <div class="suggestion-chip" onclick="useSuggestion(this)">What structural or foundation concerns were identified across all inspected properties, and show me the relevant photos?</div>
       <div class="suggestion-chip" onclick="useSuggestion(this)">What is the total estimated repair cost across all inspection findings?</div>
+      <div class="suggestion-chip" onclick="useSuggestion(this)">What environmental risks were identified in the Phase 1 site assessment?</div>
       <div class="suggestion-chip" onclick="useSuggestion(this)">Compare the comparable sales adjustment methodology between the URAR report and the Las Vegas condo appraisal</div>
+      <div class="suggestion-chip" onclick="useSuggestion(this)">What structural or foundation concerns were identified across all inspected properties, and show me the relevant photos?</div>
     </div>
     <div id="input-area">
       <input id="input" type="text" placeholder="Ask about property valuations..." autocomplete="off">
@@ -832,9 +833,12 @@ input.addEventListener('keydown', e => {
 });
 
 function openViewer(pdfUrl, label) {
-  pdfFrame.src = pdfUrl;
-  viewerTitle.textContent = label;
-  viewerCol.classList.add('open');
+  closeViewer();
+  setTimeout(() => {
+    pdfFrame.src = pdfUrl;
+    viewerTitle.textContent = label;
+    viewerCol.classList.add('open');
+  }, 50);
 }
 
 function closeViewer() {
@@ -853,15 +857,18 @@ function onPageChipClick(btn, pdfUrl, label) {
 let latestRetrievedDocs = [];
 
 function onCiteClick(sourcePdf, page) {
-  const norm = sourcePdf.toLowerCase().replace(/_/g, ' ').replace('.pdf', '');
-  // Search citations first, then all retrieved docs
+  const norm = s => (s || '').toLowerCase().replace(/[_\- ]/g, '').replace('.pdf', '');
+  const key = norm(sourcePdf);
   const allDocs = [...latestCitations, ...latestRetrievedDocs];
-  const cite = allDocs.find(c => {
-    const cn = (c.source_pdf || '').toLowerCase().replace(/_/g, ' ').replace('.pdf', '');
-    return cn === norm && c.page_number === page;
-  });
+  console.log('onCiteClick', {sourcePdf, page, key, docs: allDocs.map(c => ({source_pdf: c.source_pdf, page_number: c.page_number, has_url: !!c.pdf_url}))});
+  // Match by page, try exact name first then fuzzy
+  let cite = allDocs.find(c => norm(c.source_pdf) === key && c.page_number === page);
+  if (!cite) cite = allDocs.find(c => norm(c.source_pdf) === key);
+  if (!cite) cite = allDocs.find(c => c.page_number === page && c.pdf_url);
   if (cite && cite.pdf_url) {
     openViewer(cite.pdf_url, cite.source_pdf + ' - Page ' + page);
+  } else {
+    console.warn('No matching citation found for', sourcePdf, 'page', page);
   }
 }
 
@@ -888,19 +895,35 @@ function getRenderableText(text) {
 
 function renderAnswerHtml(text) {
   let html = escapeHtml(text);
-  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-  // Citation with URL: [label, p.N](url)
+
+  // Citations with URL: [label, p.N](url)
   html = html.replace(/\[([^\]]*?),\s*p\.?\s*(\d+)\]\([^)]+\)/g, (m, label, page) => {
     const s = label.trim().replace(/'/g, "\\'");
     return '<a class="cite-link" onclick="onCiteClick(\'' + s + '\', ' + page + ')">' + escapeHtml(label.trim()) + ', p.' + page + '</a>';
   });
-  // Citation without URL: [label, p.N]
+  // Citations without URL: [label, p.N]
   html = html.replace(/\[([^\]]*?),\s*p\.?\s*(\d+)\]/g, (m, label, page) => {
+    const s = label.trim().replace(/'/g, "\\'");
+    return '<a class="cite-link" onclick="onCiteClick(\'' + s + '\', ' + page + ')">' + escapeHtml(label.trim()) + ', p.' + page + '</a>';
+  });
+  // Bare citations: filename.pdf, p.N (not inside brackets or links)
+  html = html.replace(/(?<!["\w\/])([a-zA-Z0-9_\-]+\.pdf),?\s*p\.?\s*(\d+)/g, (m, label, page) => {
     const s = label.trim().replace(/'/g, "\\'");
     return '<a class="cite-link" onclick="onCiteClick(\'' + s + '\', ' + page + ')">' + escapeHtml(label.trim()) + ', p.' + page + '</a>';
   });
   // Other markdown links
   html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color:var(--blue-600)">$1</a>');
+  // Images: ![alt](url) -- remove, model sometimes hallucinates these
+  html = html.replace(/!(\[[^\]]*\])\([^)]+\)/g, '');
+  // Bold
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  // Headings: ### heading
+  html = html.replace(/^### (.+)$/gm, '<strong style="font-size:14px;display:block;margin-top:12px;">$1</strong>');
+  // Bullet lists: * item or - item
+  html = html.replace(/^[\*\-] (.+)$/gm, '<span style="display:block;padding-left:16px;">&bull; $1</span>');
+  // Function call round tags: [Function call round N] **text**
+  html = html.replace(/\[Function call round \d+\]\s*/g, '');
+  // Newlines
   html = html.replace(/\n/g, '<br>');
   return html;
 }
@@ -990,13 +1013,13 @@ async function sendMessage() {
     const decoder = new TextDecoder();
     let buffer = '';
 
+    let eventType = '';
     while (true) {
       const {done, value} = await reader.read();
       if (done) break;
       buffer += decoder.decode(value, {stream: true});
       const lines = buffer.split('\n');
       buffer = lines.pop();
-      let eventType = '';
       for (const line of lines) {
         if (line.startsWith('event: ')) {
           eventType = line.slice(7);
@@ -1017,6 +1040,9 @@ async function sendMessage() {
           } else if (eventType === 'done') {
             latestCitations = data.citations || [];
             latestRetrievedDocs = data.retrieved_docs || [];
+            console.log('[done] citations:', latestCitations.length, 'retrieved:', latestRetrievedDocs.length,
+              'cite_urls:', latestCitations.filter(c => c.pdf_url).length,
+              'doc_urls:', latestRetrievedDocs.filter(d => d.pdf_url).length);
             statusDiv.style.display = 'none';
             if (!thinkingText && !data.thinking) {
               thinkingDiv.style.display = 'none';
@@ -1024,8 +1050,9 @@ async function sendMessage() {
               thinkingDiv.textContent = data.thinking;
             }
             const finalAnswer = data.answer || answerText;
-            answerDiv.innerHTML = renderAnswerHtml(finalAnswer);
-            answerDiv.innerHTML += buildRetrievedPanel(data.retrieved_docs);
+            const panelHtml = buildRetrievedPanel(data.retrieved_docs);
+            console.log('[done] finalAnswer length:', finalAnswer.length, 'panel html length:', panelHtml.length, 'retrieved_docs:', (data.retrieved_docs || []).length);
+            answerDiv.innerHTML = renderAnswerHtml(finalAnswer) + panelHtml;
           }
           eventType = '';
           scrollChat();
