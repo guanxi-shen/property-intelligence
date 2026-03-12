@@ -155,18 +155,25 @@ class PageSearchClient:
                 seen_ids.add(dp_id)
 
                 meta = self.metadata_lookup.get(dp_id, {})
-                gcs_uri = meta.get('gcs_uri', '')
                 all_results.append({
                     'datapoint_id': dp_id,
                     'source_pdf': meta.get('source_pdf', 'Unknown'),
                     'page_number': meta.get('page_number', 'Unknown'),
-                    'gcs_uri': gcs_uri,
+                    'gcs_uri': meta.get('gcs_uri', ''),
                     'distance': neighbor.distance,
-                    'signed_url': self.generate_signed_url(gcs_uri),
+                    'signed_url': '',
                     'query_used': query_text,
                 })
 
         all_results.sort(key=lambda x: x['distance'])
+
+        # Generate signed URLs in parallel
+        gcs_uris = [r['gcs_uri'] for r in all_results]
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            urls = list(pool.map(self.generate_signed_url, gcs_uris))
+        for r, url in zip(all_results, urls):
+            r['signed_url'] = url
+
         return all_results
 
 

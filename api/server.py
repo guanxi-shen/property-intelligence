@@ -69,32 +69,44 @@ def _get_agent(session_id: str):
 
 def _enrich_citations(citations: list) -> list:
     """Add pdf_url (signed URL to full PDF#page=N) to every citation."""
+    if not citations:
+        return citations
+
     client = _get_storage()
     bucket = client.bucket(BUCKET_NAME)
-    pdf_url_cache = {}
+
+    unique_pdfs = list({c.get("source_pdf", "") for c in citations} - {""})
+    logger.info(f"Enriching {len(citations)} citations, {len(unique_pdfs)} unique PDFs: {unique_pdfs}")
+
+    def _resolve_pdf_url(pdf_name):
+        for prefix in [PROCESSED_PREFIX, "uploads/"]:
+            blob_path = f"{prefix}{pdf_name}"
+            blob = bucket.blob(blob_path)
+            try:
+                if blob.exists():
+                    url = blob.generate_signed_url(
+                        version="v4", expiration=timedelta(days=7), method="GET",
+                    )
+                    logger.info(f"Signed URL resolved: {pdf_name} -> {blob_path}")
+                    return pdf_name, url
+                else:
+                    logger.debug(f"Blob not found: {blob_path}")
+            except Exception as e:
+                logger.warning(f"Signed URL error for {blob_path}: {e}")
+        logger.warning(f"No blob found for PDF: {pdf_name}")
+        return pdf_name, ""
+
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        pdf_url_cache = dict(pool.map(_resolve_pdf_url, unique_pdfs))
+
+    missing = [name for name, url in pdf_url_cache.items() if not url]
+    if missing:
+        logger.warning(f"Citations missing signed URLs: {missing}")
 
     for c in citations:
-        pdf_name = c.get("source_pdf", "")
+        base_url = pdf_url_cache.get(c.get("source_pdf", ""), "")
         page = c.get("page_number", 1)
-
-        if pdf_name not in pdf_url_cache:
-            for prefix in [PROCESSED_PREFIX, "uploads/"]:
-                blob = bucket.blob(f"{prefix}{pdf_name}")
-                if blob.exists():
-                    try:
-                        pdf_url_cache[pdf_name] = blob.generate_signed_url(
-                            version="v4",
-                            expiration=timedelta(days=7),
-                            method="GET",
-                        )
-                    except Exception as e:
-                        logger.warning(f"Signed URL error for {pdf_name}: {e}")
-                        pdf_url_cache[pdf_name] = ""
-                    break
-            else:
-                pdf_url_cache[pdf_name] = ""
-
-        base_url = pdf_url_cache[pdf_name]
         c["pdf_url"] = f"{base_url}#page={page}" if base_url else ""
 
     return citations
@@ -125,9 +137,12 @@ async def chat_stream(request: Request):
 
     async def run_agent():
         try:
+            logger.info(f"Chat started: session={session_id}, message={message[:100]}")
             result = await asyncio.to_thread(agent.chat, message, stream_cb)
+            logger.info(f"Agent returned: {len(result.get('citations', []))} citations, {len(result.get('retrieved_docs', []))} retrieved docs")
             result["citations"] = _enrich_citations(result.get("citations", []))
             result["retrieved_docs"] = _enrich_citations(result.get("retrieved_docs", []))
+            logger.info("Emitting done event")
             await queue.put(("done", result))
         except Exception as e:
             logger.error(f"Agent error: {e}", exc_info=True)
@@ -140,11 +155,13 @@ async def chat_stream(request: Request):
         task = asyncio.create_task(run_agent())
         while True:
             event_type, data = await queue.get()
+            logger.debug(f"SSE event: {event_type}")
             if event_type == "done":
                 yield _sse_event("done", data)
                 break
             yield _sse_event(event_type, data)
         await task
+        logger.info("SSE stream completed")
 
     return StreamingResponse(
         event_generator(),
@@ -357,13 +374,19 @@ async def upload_status():
 @app.post("/pipeline/trigger")
 async def pipeline_trigger(request: Request):
     body = await request.json()
-    bucket = body.get("bucket", "")
+    bucket_name = body.get("bucket", "")
     name = body.get("name", "")
 
     if not name.startswith("uploads/") or not name.lower().endswith(".pdf"):
         return {"status": "skipped", "reason": f"Not a PDF in uploads/: {name}"}
 
-    gcs_uri = f"gs://{bucket}/{name}"
+    # Check blob exists before processing (avoids 404s from stale GCS notifications)
+    client = _get_storage()
+    blob = client.bucket(bucket_name).blob(name)
+    if not blob.exists():
+        return {"status": "skipped", "reason": f"Blob no longer exists (already processed?): {name}"}
+
+    gcs_uri = f"gs://{bucket_name}/{name}"
     logger.info(f"Processing triggered for: {gcs_uri}")
 
     try:

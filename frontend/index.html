@@ -1035,6 +1035,7 @@ async function sendMessage() {
   } catch (err) {
     answerDiv.innerHTML = '<em style="color:var(--grey-500)">Connection error. Please try again.</em>';
     thinkingDiv.style.display = 'none';
+  } finally {
     statusDiv.style.display = 'none';
   }
 

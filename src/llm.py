@@ -31,7 +31,7 @@ class GeminiLLM:
         system_instruction: str = None,
         function_declarations: list = None,
         function_handlers: dict = None,
-        thinking_level: str = "medium",
+        thinking_level: str = "low",
         max_function_calling_rounds: int = MAX_FUNCTION_CALLING_ROUNDS,
     ):
         self.model_name = model_name
@@ -231,7 +231,7 @@ class GeminiLLM:
 
             if thinking:
                 first_line = thinking.strip().split('\n')[0][:200]
-                all_thinking += f"\n[Round {round_num + 1}] {first_line}"
+                all_thinking += f"\n[Function call round {round_num + 1}] {first_line}"
 
             if not function_calls:
                 break

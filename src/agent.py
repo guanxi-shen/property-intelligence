@@ -36,7 +36,7 @@ def _get_page_client():
     return _page_client
 
 
-def search_text(queries: list, neighbor_count: int = 15) -> dict:
+def search_text(queries: list, neighbor_count: int = 10) -> dict:
     """Search text chunks from property documents with deduplication across rounds.
 
     Args:
