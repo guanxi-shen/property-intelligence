@@ -911,10 +911,17 @@ function renderAnswerHtml(text) {
     const s = label.trim().replace(/'/g, "\\'");
     return '<a class="cite-link" onclick="onCiteClick(\'' + s + '\', ' + page + ')">' + escapeHtml(label.trim()) + ', p.' + page + '</a>';
   });
+  // Images: ![alt](url) -- open GCS page images in viewer, remove others
+  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (m, alt, url) => {
+    if (url.includes('storage.googleapis.com') || url.includes('storage.cloud.google.com')) {
+      const eu = url.replace(/'/g, "\\'");
+      const el = (alt || 'Page image').replace(/'/g, "\\'");
+      return '<a class="cite-link" onclick="openViewer(\'' + eu + '\', \'' + el + '\')">' + escapeHtml(alt || 'View page') + '</a>';
+    }
+    return '';
+  });
   // Other markdown links
   html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color:var(--blue-600)">$1</a>');
-  // Images: ![alt](url) -- remove, model sometimes hallucinates these
-  html = html.replace(/!(\[[^\]]*\])\([^)]+\)/g, '');
   // Bold
   html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
   // Headings: ### heading
