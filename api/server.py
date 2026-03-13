@@ -150,6 +150,14 @@ async def chat_stream(request: Request):
             print(f"[chat] Agent done in {t1-t0:.1f}s: answer={len(result.get('answer',''))}c, citations={len(cites)}, retrieved={len(docs)}")
             for c in cites:
                 print(f"  [cite] {c.get('source_pdf')} p.{c.get('page_number')} type={c.get('type')}")
+            # Log raw citation patterns from the answer for debugging
+            import re
+            answer_text = result.get("answer", "")
+            raw_citations = re.findall(r'\[[^\]]*?\]\([^)]*\)', answer_text)
+            bare_citations = re.findall(r'(?<!\()(?<!\[)[a-zA-Z0-9_\-]+\.pdf[,\s]*p\.?\s*\d+', answer_text)
+            print(f"[chat] Raw citation patterns in answer: {raw_citations[:10]}")
+            if bare_citations:
+                print(f"[chat] Bare citation patterns: {bare_citations[:10]}")
             result["citations"] = _enrich_citations(result.get("citations", []))
             result["retrieved_docs"] = _enrich_citations(result.get("retrieved_docs", []))
             t2 = _t.time()
