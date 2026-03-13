@@ -36,7 +36,7 @@ def _get_page_client():
     return _page_client
 
 
-def search_text(queries: list, neighbor_count: int = 5) -> dict:
+def search_text(queries: list, neighbor_count: int = 12) -> dict:
     """Search text chunks from property documents with deduplication across rounds.
 
     Args:
@@ -91,7 +91,7 @@ def search_text(queries: list, neighbor_count: int = 5) -> dict:
     }
 
 
-def search_page_img(queries: list, neighbor_count: int = 4, diversity_balance: float = 0.5) -> dict:
+def search_page_img(queries: list, neighbor_count: int = 8, diversity_balance: float = 0.5) -> dict:
     """Search PDF page images from property documents with deduplication across rounds.
 
     Args:

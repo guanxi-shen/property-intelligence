@@ -56,7 +56,7 @@ SEARCH_TEXT_DECLARATION = {
             "neighbor_count": {
                 "type": "integer",
                 "description": "Number of results per query (default 5).",
-                "default": 5
+                "default": 12
             }
         },
         "required": ["queries"]
@@ -76,8 +76,8 @@ SEARCH_PAGE_IMG_DECLARATION = {
             },
             "neighbor_count": {
                 "type": "integer",
-                "description": "Number of page results per query (default 4).",
-                "default": 4
+                "description": "Number of page results per query (default 8).",
+                "default": 8
             },
             "diversity_balance": {
                 "type": "number",
