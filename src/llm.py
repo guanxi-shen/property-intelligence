@@ -96,9 +96,11 @@ class GeminiLLM:
                 return text, thinking, function_calls, accumulated_parts
 
             except Exception as e:
-                if attempt < STREAM_MAX_RETRIES - 1 and ("429" in str(e) or "RESOURCE_EXHAUSTED" in str(e)):
+                err_str = str(e)
+                retryable = "429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "499" in err_str or "CANCELLED" in err_str
+                if attempt < STREAM_MAX_RETRIES - 1 and retryable:
                     wait = 2 ** attempt * 5
-                    logger.warning(f"429 rate limit, retry {attempt + 1}/{STREAM_MAX_RETRIES} in {wait}s")
+                    logger.warning(f"Retryable error ({err_str[:80]}), retry {attempt + 1}/{STREAM_MAX_RETRIES} in {wait}s")
                     time.sleep(wait)
                     continue
                 raise

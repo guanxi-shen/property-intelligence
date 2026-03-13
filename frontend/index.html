@@ -906,8 +906,8 @@ function renderAnswerHtml(text) {
     const s = label.trim().replace(/'/g, "\\'");
     return '<a class="cite-link" onclick="onCiteClick(\'' + s + '\', ' + page + ')">' + escapeHtml(label.trim()) + ', p.' + page + '</a>';
   });
-  // Bare citations: filename.pdf, p.N (not inside brackets or links)
-  html = html.replace(/(?<!["\w\/])([a-zA-Z0-9_\-]+\.pdf),?\s*p\.?\s*(\d+)/g, (m, label, page) => {
+  // Bare citations: filename.pdf, p.N (not inside already-rendered HTML)
+  html = html.replace(/(?<!['"\w\/>])([a-zA-Z0-9_\-]+\.pdf),?\s*p\.?\s*(\d+)/g, (m, label, page) => {
     const s = label.trim().replace(/'/g, "\\'");
     return '<a class="cite-link" onclick="onCiteClick(\'' + s + '\', ' + page + ')">' + escapeHtml(label.trim()) + ', p.' + page + '</a>';
   });
